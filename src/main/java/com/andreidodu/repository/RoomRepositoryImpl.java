@@ -1,5 +1,6 @@
 package com.andreidodu.repository;
 
+import com.andreidodu.constants.MessageConst;
 import com.andreidodu.model.message.*;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -77,7 +78,7 @@ public class RoomRepositoryImpl implements RoomRepository {
                 .where(message.room.id.eq(roomId).and(message.user.id.in(userIds)))
                 .orderBy(message.createdDate.asc())
                 .offset(count - offset)
-                .limit(3)
+                .limit(MessageConst.NUM_OF_MESSAGES_LIMIT)
                 .fetch();
     }
 

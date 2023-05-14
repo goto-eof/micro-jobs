@@ -9,5 +9,5 @@ import java.util.List;
 @Setter
 public class MessageResponseDTO extends DTOCommon {
     private List<MessageDTO> messages;
-    private long offset;
+    private long nextOffset;
 }
