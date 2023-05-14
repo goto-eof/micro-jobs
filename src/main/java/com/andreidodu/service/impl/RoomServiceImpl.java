@@ -2,10 +2,7 @@ package com.andreidodu.service.impl;
 
 import com.andreidodu.constants.MessageConst;
 import com.andreidodu.constants.RoomConst;
-import com.andreidodu.dto.JobDTO;
-import com.andreidodu.dto.MessageDTO;
-import com.andreidodu.dto.RoomDTO;
-import com.andreidodu.dto.RoomExtendedDTO;
+import com.andreidodu.dto.*;
 import com.andreidodu.exception.ValidationException;
 import com.andreidodu.mapper.JobMapper;
 import com.andreidodu.mapper.MessageMapper;
@@ -124,11 +121,27 @@ public class RoomServiceImpl implements RoomService {
 
 
     @Override
-    public List<MessageDTO> getMessages(String username, Long roomId) throws ValidationException {
+    public MessageResponseDTO getMessages(String username, Long roomId, MessageRequestDTO messageRequestDTO) throws ValidationException {
         if (!roomRepository.userBelongsToRoom(username, roomId)) {
             throw new ValidationException("wrong room id");
         }
-        return this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId));
+        long count = roomRepository.countMessages(roomId);
+        MessageResponseDTO response = new MessageResponseDTO();
+        response.setMessages(this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId, messageRequestDTO.getOffset(), count)));
+        long offset = messageRequestDTO.getOffset();
+
+        if (offset == count) {
+            offset = -1;
+        } else {
+            offset += 3;
+            if (offset > count) {
+                offset = count;
+            }
+        }
+        response.setOffset(offset);
+
+        return response;
+
     }
 
     @Override

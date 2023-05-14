@@ -25,9 +25,9 @@ public class RoomController {
         return ResponseEntity.ok(this.roomService.createMessage(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), messageDTO));
     }
 
-    @GetMapping("/message/roomId/{roomId}")
-    public ResponseEntity<List<MessageDTO>> getMessages(@PathVariable Long roomId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
-        return ResponseEntity.ok(this.roomService.getMessages(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), roomId));
+    @PostMapping("/message/roomId/{roomId}")
+    public ResponseEntity<MessageResponseDTO> getMessages(@PathVariable Long roomId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator, @RequestBody MessageRequestDTO messageRequest) throws ApplicationException {
+        return ResponseEntity.ok(this.roomService.getMessages(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), roomId, messageRequest));
     }
 
     @GetMapping("/jobId/{jobId}")

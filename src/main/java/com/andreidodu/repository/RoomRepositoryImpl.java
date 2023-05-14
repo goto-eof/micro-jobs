@@ -63,7 +63,8 @@ public class RoomRepositoryImpl implements RoomRepository {
     }
 
     @Override
-    public List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId) {
+    public List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId, long offset, long count) {
+
         QMessage message = QMessage.message1;
         QParticipant participant = QParticipant.participant;
         var userIds = JPAExpressions
@@ -74,7 +75,26 @@ public class RoomRepositoryImpl implements RoomRepository {
                 .select(message)
                 .from(message)
                 .where(message.room.id.eq(roomId).and(message.user.id.in(userIds)))
+                .orderBy(message.createdDate.asc())
+                .offset(count - offset)
+                .limit(3)
                 .fetch();
+    }
+
+
+    @Override
+    public Long countMessages(Long roomId) {
+        QMessage message = QMessage.message1;
+        QParticipant participant = QParticipant.participant;
+        var userIds = JPAExpressions
+                .select(participant.user.id)
+                .from(participant)
+                .where(participant.room.id.eq(roomId));
+        return queryFactory
+                .select(message.id.count())
+                .from(message)
+                .where(message.room.id.eq(roomId).and(message.user.id.in(userIds)))
+                .fetchOne();
     }
 
     @Override
