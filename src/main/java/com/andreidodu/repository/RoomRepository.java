@@ -15,7 +15,7 @@ public interface RoomRepository {
 
     boolean userBelongsToRoomAndIsJobAuthor(String username, Long roomId);
 
-    List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId, long offset, long count);
+    List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId, long offset, long count, long limit);
 
     Long countMessages(Long roomId);
 

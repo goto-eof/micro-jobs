@@ -125,15 +125,20 @@ public class RoomServiceImpl implements RoomService {
         if (!roomRepository.userBelongsToRoom(username, roomId)) {
             throw new ValidationException("wrong room id");
         }
-        long currentOffset = messageRequestDTO.getOffset();
+        long currentOffsetRequest = messageRequestDTO.getOffsetRequest();
+        long lastOffset = messageRequestDTO.getLastOffset();
         long count = roomRepository.countMessages(roomId);
-        if (currentOffset>count){
-            currentOffset = count;
-            messageRequestDTO.setOffset(currentOffset);
+        long limit = MessageConst.NUM_OF_MESSAGES_LIMIT;
+        if (currentOffsetRequest > lastOffset) {
+            limit = (currentOffsetRequest - lastOffset);
+        }
+        if (currentOffsetRequest > count) {
+            messageRequestDTO.setOffsetRequest(currentOffsetRequest);
+            currentOffsetRequest = count;
         }
         MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessages(this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffset, count)));
-        long offset = messageRequestDTO.getOffset();
+        response.setMessages(this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffsetRequest, count, limit)));
+        long offset = messageRequestDTO.getOffsetRequest();
 
         if (offset == count) {
             offset = -1;

@@ -6,5 +6,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class MessageRequestDTO {
-    private Long offset;
+    private Long offsetRequest;
+    private Long lastOffset;
 }

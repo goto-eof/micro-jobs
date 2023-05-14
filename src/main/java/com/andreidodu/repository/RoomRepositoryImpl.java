@@ -64,7 +64,7 @@ public class RoomRepositoryImpl implements RoomRepository {
     }
 
     @Override
-    public List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId, long offset, long count) {
+    public List<Message> findMessagesByUsernameAndRoomId(String username, Long roomId, long offset, long count, long limit) {
 
         QMessage message = QMessage.message1;
         QParticipant participant = QParticipant.participant;
@@ -78,7 +78,7 @@ public class RoomRepositoryImpl implements RoomRepository {
                 .where(message.room.id.eq(roomId).and(message.user.id.in(userIds)))
                 .orderBy(message.createdDate.asc())
                 .offset(count - offset)
-                .limit(MessageConst.NUM_OF_MESSAGES_LIMIT)
+                .limit(limit)
                 .fetch();
     }
 
