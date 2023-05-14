@@ -20,9 +20,11 @@ Micro Jobs is a small platform that allows users to offer or to request services
 - refresh token
 - view requests/offers
 - insert requests/offers
+- paginated requests/offers
 - picture upload
 - admin: approve post
 - message module: write/read DM between users
+- infinite scrolling in DM
 - ...wip
 
 # Architecture
