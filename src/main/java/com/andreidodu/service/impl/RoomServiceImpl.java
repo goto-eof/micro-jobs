@@ -138,8 +138,15 @@ public class RoomServiceImpl implements RoomService {
         }
         MessageResponseDTO response = new MessageResponseDTO();
         response.setMessages(this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffsetRequest, count, limit)));
-        long offset = messageRequestDTO.getOffsetRequest();
+        long nextOffset = calculateNewOffset(messageRequestDTO, count);
+        response.setNextOffset(nextOffset);
 
+        return response;
+
+    }
+
+    private static long calculateNewOffset(MessageRequestDTO messageRequestDTO, long count) {
+        long offset = messageRequestDTO.getOffsetRequest();
         if (offset == count) {
             offset = -1;
         } else {
@@ -148,10 +155,7 @@ public class RoomServiceImpl implements RoomService {
                 offset = count;
             }
         }
-        response.setNextOffset(offset);
-
-        return response;
-
+        return offset;
     }
 
     @Override
