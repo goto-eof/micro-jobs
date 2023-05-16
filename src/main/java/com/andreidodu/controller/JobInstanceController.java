@@ -1,6 +1,8 @@
 package com.andreidodu.controller;
 
+import com.andreidodu.constants.ApplicationConst;
 import com.andreidodu.dto.JobInstanceDTO;
+import com.andreidodu.dto.ServerResultDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.service.JobInstanceService;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +33,8 @@ public class JobInstanceController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
+    public ResponseEntity<ServerResultDTO> delete(@PathVariable Long id) {
         this.jobInstanceService.delete(id);
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok(new ServerResultDTO(ApplicationConst.STATUS_DELETE_OK, "deleted"));
     }
 }

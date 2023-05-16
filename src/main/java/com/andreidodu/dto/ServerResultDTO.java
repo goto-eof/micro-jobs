@@ -1,20 +1,16 @@
 package com.andreidodu.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
+@AllArgsConstructor
 public class ServerResultDTO {
 
-    public ServerResultDTO() {
-    }
-
-    public ServerResultDTO(int errorCode, String message) {
-        this.errorCode = errorCode;
-        this.message = message;
-    }
-
-    private int errorCode;
+    private int resultCode;
     private String message;
+
+
 }
