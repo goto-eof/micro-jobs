@@ -4,6 +4,8 @@ import com.andreidodu.constants.JobConst;
 import com.andreidodu.dto.JobDTO;
 import com.andreidodu.dto.JobListPageDTO;
 import com.andreidodu.exception.ApplicationException;
+import com.andreidodu.exception.ValidationException;
+import com.andreidodu.service.JobInstanceService;
 import com.andreidodu.service.JobService;
 import com.andreidodu.service.JwtService;
 import com.andreidodu.service.RoomService;
@@ -24,20 +26,21 @@ public class JobPrivateController {
     final private JwtService jwtService;
 
     final private RoomService roomService;
+    final private JobInstanceService jobInstanceService;
 
-    @GetMapping("/jobId/{id}")
-    public ResponseEntity<JobDTO> getPrivate(@PathVariable Long id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.getPrivate(id, jwtService.extractUsernameFromAuthorizzation(authorization)));
+    @GetMapping("/jobId/{jobId}")
+    public ResponseEntity<JobDTO> getPrivate(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.getPrivate(jobId, jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
-    @PostMapping("/approve/jobId/{id}")
-    public ResponseEntity<JobDTO> approveJob(@PathVariable Long id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.changeJobStatus(id, JobConst.STATUS_PUBLISHED, jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator)));
+    @PostMapping("/approve/jobId/{jobId}")
+    public ResponseEntity<JobDTO> approveJob(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.changeJobStatus(jobId, JobConst.STATUS_PUBLISHED, jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator)));
     }
 
-    @PostMapping("/unpublish/jobId/{id}")
-    public ResponseEntity<JobDTO> unpublishJob(@PathVariable Long id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.changeJobStatus(id, JobConst.STATUS_UNPUBLISHED, jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator)));
+    @PostMapping("/unpublish/jobId/{jobId}")
+    public ResponseEntity<JobDTO> unpublishJob(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.changeJobStatus(jobId, JobConst.STATUS_UNPUBLISHED, jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator)));
     }
 
     @GetMapping("/jobType/{jobType}/page/{page}")
@@ -54,9 +57,9 @@ public class JobPrivateController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/admin/jobStatus/{jobStatus}/jobId/{id}")
-    public ResponseEntity<JobDTO> getPrivateByStatus(@PathVariable Long id, @PathVariable Integer jobStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.getPrivateByStatus(id, jobStatus, jwtService.extractUsernameFromAuthorizzation(authorization)));
+    @GetMapping("/admin/jobStatus/{jobStatus}/jobId/{jobId}")
+    public ResponseEntity<JobDTO> getPrivateByStatus(@PathVariable Long jobId, @PathVariable Integer jobStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.getPrivateByStatus(jobId, jobStatus, jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
     @PostMapping
@@ -64,14 +67,14 @@ public class JobPrivateController {
         return ResponseEntity.ok(this.jobService.save(jobDTO, this.jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
-    @PutMapping("/jobId/{id}")
-    public ResponseEntity<JobDTO> update(@PathVariable Long id, @RequestBody JobDTO jobDTO, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.update(id, jobDTO, this.jwtService.extractUsernameFromAuthorizzation(authorization)));
+    @PutMapping("/jobId/{jobId}")
+    public ResponseEntity<JobDTO> update(@PathVariable Long jobId, @RequestBody JobDTO jobDTO, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.update(jobId, jobDTO, this.jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
-    @DeleteMapping("/jobId/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        this.jobService.delete(id, this.jwtService.extractUsernameFromAuthorizzation(authorization));
+    @DeleteMapping("/jobId/{jobId}")
+    public ResponseEntity<String> delete(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        this.jobService.delete(jobId, this.jwtService.extractUsernameFromAuthorizzation(authorization));
         return ResponseEntity.ok("OK");
     }
 
@@ -79,4 +82,5 @@ public class JobPrivateController {
     public ResponseEntity<JobDTO> getJobByRoomId(@PathVariable Long roomId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
         return ResponseEntity.ok(this.roomService.getJobByRoomId(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), roomId));
     }
+
 }

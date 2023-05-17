@@ -1,14 +1,14 @@
 package com.andreidodu.service;
 
+import com.andreidodu.dto.JobDTO;
 import com.andreidodu.dto.JobInstanceDTO;
-import com.andreidodu.exception.ApplicationException;
+import com.andreidodu.exception.ValidationException;
+
+import java.util.Optional;
 
 public interface JobInstanceService {
-    JobInstanceDTO get(Long id) throws ApplicationException;
 
-    void delete(Long id);
+    JobInstanceDTO requestWork(Long jobId, String workerUsername, Long customerId) throws ValidationException;
 
-    JobInstanceDTO save(JobInstanceDTO jobInstanceDTO) throws ApplicationException;
-
-    JobInstanceDTO update(Long id, JobInstanceDTO jobInstanceDTO) throws ApplicationException;
+    Optional<JobInstanceDTO> getJobInstanceInfo(Long jobId, String workerUsername, Long customerId) throws ValidationException;
 }
