@@ -11,5 +11,4 @@ public interface JobInstantConst {
     final static int STATUS_CUSTOMER_PAYS_WORKER = 60;
     final static int STATUS_PROCESS_COMPLETE = 70;
 
-
 }
