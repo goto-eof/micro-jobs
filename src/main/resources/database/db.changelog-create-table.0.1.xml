@@ -131,6 +131,7 @@
             <column name="update_date" type="DATETIME" defaultValueComputed="${defaultTimestamp}"/>
             <column name="version" type="INT"/>
         </createTable>
+        <addUniqueConstraint tableName="${tablePrefix}job_instance" columnNames="job_id, user_worker_id" constraintName="job_instance_unique_cols"/>
     </changeSet>
 
 

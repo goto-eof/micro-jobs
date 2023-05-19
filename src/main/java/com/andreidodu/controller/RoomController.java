@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping(value = "/api/v1/room")
@@ -33,6 +34,11 @@ public class RoomController {
     @GetMapping("/jobId/{jobId}")
     public ResponseEntity<RoomDTO> getRoom(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
         return ResponseEntity.ok(this.roomService.getRoom(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), jobId));
+    }
+
+    @GetMapping("/getWorkerId/roomId/{roomId}")
+    public ResponseEntity<Optional<Long>> getWorkerId(@PathVariable Long roomId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationAdministrator) throws ApplicationException {
+        return ResponseEntity.ok(this.roomService.retrieveWorkerId(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator), roomId));
     }
 
     @GetMapping

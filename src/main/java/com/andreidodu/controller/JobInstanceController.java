@@ -1,9 +1,6 @@
 package com.andreidodu.controller;
 
-import com.andreidodu.constants.ApplicationConst;
-import com.andreidodu.dto.JobDTO;
 import com.andreidodu.dto.JobInstanceDTO;
-import com.andreidodu.dto.ServerResultDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.exception.ValidationException;
 import com.andreidodu.service.JobInstanceService;
@@ -22,13 +19,19 @@ public class JobInstanceController {
     final private JwtService jwtService;
     final private JobInstanceService jobInstanceService;
 
-    @GetMapping("/jobId/{jobId}/customerId/{customerId}")
-    public ResponseEntity<Optional<JobInstanceDTO>> getJobInstanceInfo(@PathVariable Long jobId, @PathVariable Long customerId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        return ResponseEntity.ok(this.jobInstanceService.getJobInstanceInfo(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), customerId));
+    @GetMapping("/jobId/{jobId}/workerId/{workerId}")
+    public ResponseEntity<JobInstanceDTO> getJobInstanceInfo(@PathVariable Long jobId,@PathVariable Long workerId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobInstanceService.getJobInstanceInfo(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), workerId));
     }
 
-    @PostMapping("/jobId/{jobId}/customerId/{customerId}")
-    public ResponseEntity<JobInstanceDTO> requestWork(@PathVariable Long jobId, @PathVariable Long customerId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ValidationException {
-        return ResponseEntity.ok(this.jobInstanceService.requestWork(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), customerId));
+    @PostMapping("/jobId/{jobId}/workerId/{workerId}/jobInstanceStatus/{jobInstanceStatus}")
+    public ResponseEntity<JobInstanceDTO> workProviderChangeJobInstanceStatus(@PathVariable Long jobId,@PathVariable Long workerId, @PathVariable Integer jobInstanceStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ValidationException {
+        return ResponseEntity.ok(this.jobInstanceService.workProviderChangeJobInstanceStatus(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), workerId, jobInstanceStatus));
     }
+
+    @PostMapping("/jobId/{jobId}/jobInstanceStatus/{jobInstanceStatus}")
+    public ResponseEntity<JobInstanceDTO> workerChangeJobInstanceStatus(@PathVariable Long jobId, @PathVariable Integer jobInstanceStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobInstanceService.workerChangeJobInstanceStatus(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), jobInstanceStatus));
+    }
+
 }

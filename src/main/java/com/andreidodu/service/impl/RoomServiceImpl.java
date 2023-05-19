@@ -84,6 +84,18 @@ public class RoomServiceImpl implements RoomService {
         return this.roomMapper.toDTO(room);
     }
 
+
+    @Override
+    public Optional<Long> retrieveWorkerId(String username, Long roomId) {
+        Optional<Room> roomOpt = roomCrudRepository.findById(roomId);
+        if (roomOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        Room room = roomOpt.get();
+        Long publishedId = room.getJob().getPublisher().getId();
+        return room.getParticipants().stream().filter(participant -> !participant.getUser().getId().equals(publishedId)).map(participant -> participant.getUser().getId()).findFirst();
+    }
+
     private static Room createRoom(Job job) {
         Room room;
         room = new Room();
