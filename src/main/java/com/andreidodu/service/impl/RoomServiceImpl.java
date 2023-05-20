@@ -159,7 +159,7 @@ public class RoomServiceImpl implements RoomService {
 
     private static long calculateNewOffset(MessageRequestDTO messageRequestDTO, long count) {
         long offset = messageRequestDTO.getOffsetRequest();
-        if (offset == count) {
+        if (offset == count || offset > count) {
             offset = -1;
         } else {
             offset += MessageConst.NUM_OF_MESSAGES_LIMIT;

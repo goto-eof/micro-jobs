@@ -46,7 +46,4 @@ public class RoomController {
         return ResponseEntity.ok(this.roomService.getRooms(jwtService.extractUsernameFromAuthorizzation(authorizationAdministrator)));
     }
 
-
-
-
 }
