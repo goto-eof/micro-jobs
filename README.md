@@ -26,6 +26,7 @@ Micro Jobs is a small platform that allows users to offer or to request services
 - message module: write/read DM between users
 - infinite scrolling in DM
 - microjob status
+- user rating
 - ...wip
 
 # Architecture
