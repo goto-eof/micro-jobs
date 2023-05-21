@@ -1,6 +1,5 @@
 package com.andreidodu.service.impl;
 
-
 import com.andreidodu.dto.RatingDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.mapper.RatingMapper;
@@ -16,9 +15,6 @@ import com.andreidodu.service.RatingService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -73,7 +69,6 @@ public class RatingServiceImpl implements RatingService {
         Job job = jobInstanceOptional.get().getJob();
         Long authorId = job.getPublisher().getId();
         Long workerId = authorId.equals(ratingDTO.getUserTargetId()) ? ratingDTO.getUserVoterId() : ratingDTO.getUserTargetId();
-
 
         if (jobInstanceOptional.isEmpty()) {
             throw new ApplicationException("JobInstance not found");
