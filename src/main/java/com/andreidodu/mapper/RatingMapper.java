@@ -17,7 +17,6 @@ public class RatingMapper extends ModelMapperCommon<Rating, RatingDTO> {
         super.getModelMapper().typeMap(Rating.class, RatingDTO.class).addMappings(mapper -> {
             mapper.map(src -> src.getUserTarget().getId(), RatingDTO::setUserTargetId);
             mapper.map(src -> src.getUserVoter().getId(), RatingDTO::setUserVoterId);
-            mapper.map(src -> src.getJobInstance().getId(), RatingDTO::setJobInstanceId);
         });
     }
 

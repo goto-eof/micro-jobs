@@ -30,8 +30,8 @@ public class Rating extends ModelCommon {
     @Column(name = "comment")
     private String comment;
 
-    @OneToOne(cascade = CascadeType.DETACH)
-    @JoinColumn(name = "job_instance_id", referencedColumnName = "id", nullable = false)
+    @ManyToOne
+    @JoinColumn(name = "job_instance_id", nullable = false)
     private JobInstance jobInstance;
 
 

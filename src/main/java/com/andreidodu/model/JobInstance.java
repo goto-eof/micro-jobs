@@ -4,6 +4,8 @@ import com.andreidodu.model.common.ModelCommon;
 import jakarta.persistence.*;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.util.List;
+
 @Entity
 @Table(name = "mj_job_instance")
 @EntityListeners(AuditingEntityListener.class)
@@ -40,8 +42,8 @@ public class JobInstance extends ModelCommon {
     @Column(name = "status", nullable = false)
     private Integer status;
 
-    @OneToOne(mappedBy = "jobInstance")
-    private Rating rating;
+    @OneToMany(mappedBy = "jobInstance", cascade = CascadeType.REMOVE)
+    private List<Rating> ratingList;
 
     public Long getId() {
         return id;
@@ -83,12 +85,12 @@ public class JobInstance extends ModelCommon {
         this.status = status;
     }
 
-    public Rating getRating() {
-        return rating;
+    public List<Rating> getRatingList() {
+        return ratingList;
     }
 
-    public void setRating(Rating rating) {
-        this.rating = rating;
+    public void setRatingList(List<Rating> ratingList) {
+        this.ratingList = ratingList;
     }
 
     @Override
@@ -99,7 +101,7 @@ public class JobInstance extends ModelCommon {
                 ", userCustomer=" + userCustomer.getId() +
                 ", job=" + job.getId() +
                 ", status=" + status +
-                ", rating=" + rating +
+                ", rating=" + ratingList.toString() +
                 '}';
     }
 }
