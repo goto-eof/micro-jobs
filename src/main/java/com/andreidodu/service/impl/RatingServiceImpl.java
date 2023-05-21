@@ -56,7 +56,6 @@ public class RatingServiceImpl implements RatingService {
             return ratingMapper.toDTO(ratingRepository.save(rating));
         }
 
-
         if (ratingDTO.getUserTargetId() == null) {
             throw new ApplicationException("User target id is null");
         }
