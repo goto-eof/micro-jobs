@@ -29,14 +29,4 @@ public class RatingController {
         return ResponseEntity.ok(this.ratingService.save(ratingDTO, jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<RatingDTO> update(@PathVariable Long id, @RequestBody RatingDTO ratingDTO) throws ApplicationException {
-        return ResponseEntity.ok(this.ratingService.update(id, ratingDTO));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
-        this.ratingService.delete(id);
-        return ResponseEntity.ok("OK");
-    }
 }

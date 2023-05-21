@@ -39,21 +39,9 @@ public class RatingServiceImpl implements RatingService {
     }
 
     @Override
-    public void delete(Long id) {
-        this.ratingRepository.deleteById(id);
-    }
-
-    @Override
     public RatingDTO save(RatingDTO ratingDTO, String raterUsername) throws ApplicationException {
         if (ratingDTO.getId() != null) {
-            Optional<Rating> ratingOptional = ratingRepository.findById(ratingDTO.getId());
-            if (ratingOptional.isEmpty()) {
-                throw new ApplicationException("Rating not found");
-            }
-            Rating rating = ratingOptional.get();
-            rating.setRating(ratingDTO.getRating());
-            rating.setComment(ratingDTO.getComment());
-            return ratingMapper.toDTO(ratingRepository.save(rating));
+            return updateRating(ratingDTO);
         }
 
         if (ratingDTO.getUserTargetId() == null) {
@@ -99,20 +87,15 @@ public class RatingServiceImpl implements RatingService {
         return this.ratingMapper.toDTO(ratingSaved);
     }
 
-    @Override
-    public RatingDTO update(Long id, RatingDTO ratingDTO) throws ApplicationException {
-        if (!id.equals(ratingDTO.getId())) {
-            throw new ApplicationException("id not matching");
-        }
-        Optional<Rating> ratingOpt = this.ratingRepository.findById(id);
-        if (ratingOpt.isEmpty()) {
+    private RatingDTO updateRating(RatingDTO ratingDTO) throws ApplicationException {
+        Optional<Rating> ratingOptional = ratingRepository.findById(ratingDTO.getId());
+        if (ratingOptional.isEmpty()) {
             throw new ApplicationException("Rating not found");
         }
-        Rating rating = ratingOpt.get();
-        this.ratingMapper.getModelMapper().map(ratingDTO, rating);
-        Rating userSaved = this.ratingRepository.save(rating);
-        return this.ratingMapper.toDTO(userSaved);
-
+        Rating rating = ratingOptional.get();
+        rating.setRating(ratingDTO.getRating());
+        rating.setComment(ratingDTO.getComment());
+        return ratingMapper.toDTO(ratingRepository.save(rating));
     }
 
 }
