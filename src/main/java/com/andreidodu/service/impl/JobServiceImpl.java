@@ -24,13 +24,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -50,10 +45,14 @@ public class JobServiceImpl implements JobService {
     public JobDTO getPrivate(final Long id, final String username) throws ApplicationException {
         Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("Job not found"));
         User publisher = job.getPublisher();
-        if (!publisher.getUsername().equals(username)) {
+        if (!isSameUsername(username, publisher)) {
             throw new ApplicationException("User not match");
         }
         return this.jobMapper.toDTO(job);
+    }
+
+    private static boolean isSameUsername(String username, User publisher) {
+        return publisher.getUsername().equals(username);
     }
 
     @Override
@@ -65,11 +64,15 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobDTO getPrivateByStatus(Long id, Integer jobStatus, String username) throws ApplicationException {
         User administrator = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
-        if (!administrator.getRole().equals(Role.ADMIN)) {
+        if (!isAdminSameRole(administrator)) {
             throw new ValidationException("User is not admin");
         }
         Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("Job not found"));
         return this.jobMapper.toDTO(job);
+    }
+
+    private static boolean isAdminSameRole(User administrator) {
+        return Role.ADMIN.equals(administrator.getRole());
     }
 
     @Override
@@ -102,7 +105,7 @@ public class JobServiceImpl implements JobService {
     public List<JobDTO> getAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username, int page) throws ApplicationException {
         JobDTOValidator.validateJobType(type);
         User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
-        if (!Role.ADMIN.equals(user.getRole())) {
+        if (!isAdminSameRole(user)) {
             throw new ApplicationException("User is not admin");
         }
         Pageable pageable = PageRequest.of(page, 10);
@@ -124,7 +127,7 @@ public class JobServiceImpl implements JobService {
         User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
         Job job = this.jobRepository.findById(jobId).orElseThrow(() -> new ApplicationException("Job does not exists"));
         // TODO add also the administrator here
-        if (!user.getUsername().equals(job.getPublisher().getUsername())) {
+        if (!isSameUsername(job.getPublisher().getUsername(), user)) {
             throw new ValidationException("You are nto allowed to do this operation");
         }
         deleteFilesFromDisk(job.getJobPictureList());
@@ -222,7 +225,7 @@ public class JobServiceImpl implements JobService {
             throw new ValidationException("Maximum number of pictures allowed is " + MAX_NUMBER_ATTACHED_PICTURES);
         }
         Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("job not found"));
-        if (!job.getPublisher().getUsername().equals(owner)) {
+        if (!isSameUsername(owner, job.getPublisher())) {
             throw new ApplicationException("wrong user");
         }
         this.jobMapper.getModelMapper().map(jobDTO, job);
