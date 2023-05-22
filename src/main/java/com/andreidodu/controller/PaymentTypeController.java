@@ -1,5 +1,6 @@
 package com.andreidodu.controller;
 
+import com.andreidodu.dto.DeleteStatusDTO;
 import com.andreidodu.dto.PaymentTypeDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.service.PaymentTypeService;
@@ -30,8 +31,8 @@ public class PaymentTypeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
+    public ResponseEntity<DeleteStatusDTO> delete(@PathVariable Long id) {
         this.paymentTypeService.delete(id);
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok(new DeleteStatusDTO(true));
     }
 }

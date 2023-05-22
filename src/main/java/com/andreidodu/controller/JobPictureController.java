@@ -1,9 +1,11 @@
 package com.andreidodu.controller;
 
+import com.andreidodu.dto.DeleteStatusDTO;
 import com.andreidodu.dto.JobPictureDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.service.JobPictureService;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.sql.Delete;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -45,8 +47,8 @@ public class JobPictureController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(@PathVariable Long id) {
+    public ResponseEntity<DeleteStatusDTO> delete(@PathVariable Long id) {
         this.jobPictureService.delete(id);
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok(new DeleteStatusDTO(true));
     }
 }
