@@ -53,15 +53,19 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     @Override
     public JobInstanceDTO workerChangeJobInstanceStatus(Long jobId, String workerUsername, Integer jobInstanceStatus) throws ApplicationException {
         Optional<JobInstance> foundJobInstanceOptional = jobInstanceRepository.findByJob_idAndUserWorker_Username(jobId, workerUsername);
-        if (foundJobInstanceOptional.isEmpty() && isJobInstanceStatusInvalid(jobInstanceStatus)) {
-            throw new ApplicationException("no jobInstance found");
-        }
+        validateJobInstanceForChangeStatus(jobInstanceStatus, foundJobInstanceOptional);
         if (foundJobInstanceOptional.isEmpty()) {
             foundJobInstanceOptional = Optional.of(createJobInstance(jobId, workerUsername));
         }
         final JobInstance jobInstance = foundJobInstanceOptional.get();
         jobInstance.setStatus(jobInstanceStatus);
         return jobInstanceMapper.toDTO(this.jobInstanceRepository.save(jobInstance));
+    }
+
+    private static void validateJobInstanceForChangeStatus(Integer jobInstanceStatus, Optional<JobInstance> foundJobInstanceOptional) throws ApplicationException {
+        if (foundJobInstanceOptional.isEmpty() && isJobInstanceStatusInvalid(jobInstanceStatus)) {
+            throw new ApplicationException("no jobInstance found");
+        }
     }
 
     private static boolean isJobInstanceStatusInvalid(Integer jobInstanceStatus) {

@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface RoomService {
     MessageDTO createMessage(String usernameFrom, MessageDTO messageDTO) throws ValidationException;
 
-    RoomDTO getRoom(String username, Long jobId);
+    RoomDTO getRoom(String username, Long jobId) throws ValidationException;
 
     Optional<Long> retrieveWorkerId(String username, Long roomId);
 

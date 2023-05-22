@@ -26,11 +26,15 @@ public class UserPictureServiceImpl implements UserPictureService {
 
     @Override
     public UserPictureDTO get(Long id) throws ApplicationException {
-        Optional<UserPicture> modelOpt = this.userPictureRepository.findById(id);
-        if (modelOpt.isEmpty()) {
+        Optional<UserPicture> userPictureOptional = this.userPictureRepository.findById(id);
+        validateUserPictureExistence(userPictureOptional);
+        return this.userPictureMapper.toDTO(userPictureOptional.get());
+    }
+
+    private static void validateUserPictureExistence(Optional<UserPicture> userPictureOptional) throws ApplicationException {
+        if (userPictureOptional.isEmpty()) {
             throw new ApplicationException("UserPicture not found");
         }
-        return this.userPictureMapper.toDTO(modelOpt.get());
     }
 
     @Override
@@ -40,30 +44,36 @@ public class UserPictureServiceImpl implements UserPictureService {
 
     @Override
     public UserPictureDTO save(UserPictureDTO userPictureDTO) throws ApplicationException {
-        Optional<User> user = userRepository.findById(userPictureDTO.getUserId());
-        if (user.isEmpty()) {
+        Optional<User> userOptional = userRepository.findById(userPictureDTO.getUserId());
+        validateUserExistence(userOptional);
+        UserPicture userPicture = this.userPictureMapper.toModel(userPictureDTO);
+        userPicture.setUser(userOptional.get());
+        final UserPicture userPictureSaved = this.userPictureRepository.save(userPicture);
+        return this.userPictureMapper.toDTO(userPictureSaved);
+    }
+
+    private static void validateUserExistence(Optional<User> userOptional) throws ApplicationException {
+        if (userOptional.isEmpty()) {
             throw new ApplicationException("user not found");
         }
-        UserPicture model = this.userPictureMapper.toModel(userPictureDTO);
-        model.setUser(user.get());
-        final UserPicture userPicture = this.userPictureRepository.save(model);
-        return this.userPictureMapper.toDTO(userPicture);
     }
 
     @Override
     public UserPictureDTO update(Long id, UserPictureDTO userPictureDTO) throws ApplicationException {
-        if (!id.equals(userPictureDTO.getId())) {
-            throw new ApplicationException("id not matching");
-        }
-        Optional<UserPicture> userOpt = this.userPictureRepository.findById(id);
-        if (userOpt.isEmpty()) {
-            throw new ApplicationException("user picture not found");
-        }
-        UserPicture userPicture = userOpt.get();
+        isUserPictureIdSame(id, userPictureDTO);
+        Optional<UserPicture> userPictureOptional = this.userPictureRepository.findById(id);
+        validateUserPictureExistence(userPictureOptional);
+        UserPicture userPicture = userPictureOptional.get();
         this.userPictureMapper.getModelMapper().map(userPictureDTO, userPicture);
         UserPicture userSaved = this.userPictureRepository.save(userPicture);
         return this.userPictureMapper.toDTO(userSaved);
 
+    }
+
+    private static void isUserPictureIdSame(Long id, UserPictureDTO userPictureDTO) throws ApplicationException {
+        if (!id.equals(userPictureDTO.getId())) {
+            throw new ApplicationException("id not matching");
+        }
     }
 
 }

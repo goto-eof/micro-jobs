@@ -40,17 +40,43 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public MessageDTO createMessage(String username, MessageDTO messageDTO) throws ValidationException {
         Long roomId = messageDTO.getRoomId();
-        if (!roomRepository.userBelongsToRoom(username, roomId)) {
-            throw new ValidationException("wrong room id");
-        }
+
+        validateUserToRoomBelonging(username, roomId);
+
         Optional<Room> roomOptional = roomCrudRepository.findById(messageDTO.getRoomId());
-        User user = userRepository.findByUsername(username).get();
+        validateRoomExistence(roomOptional);
         Room room = roomOptional.get();
+
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        validateUserExistence(userOptional);
+        User user = userOptional.get();
 
         Message message = createMessage(messageDTO, user, room);
         messageRepository.save(message);
 
         return this.messageMapper.toDTO(message);
+    }
+
+    private static void validateRoomExistence(Optional<Room> roomOptional) throws ValidationException {
+        if (roomOptional.isEmpty()) {
+            throw new ValidationException("room does not exists");
+        }
+    }
+
+    private static void validateUserExistence(Optional<User> userOptional) throws ValidationException {
+        if (userOptional.isEmpty()) {
+            throw new ValidationException("user does not exists");
+        }
+    }
+
+    private void validateUserToRoomBelonging(String username, Long roomId) throws ValidationException {
+        if (!isUserBelongsToRoom(username, roomId)) {
+            throw new ValidationException("wrong room id");
+        }
+    }
+
+    private boolean isUserBelongsToRoom(String username, Long roomId) {
+        return roomRepository.userBelongsToRoom(username, roomId);
     }
 
     private static Message createMessage(MessageDTO messageDTO, User user, Room room) {
@@ -63,13 +89,18 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomDTO getRoom(String username, Long jobId) {
-        Optional<Room> roomOpt = roomRepository.findByJobIdAndParticipants(jobId, username);
-        User user = userRepository.findByUsername(username).get();
+    public RoomDTO getRoom(String username, Long jobId) throws ValidationException {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        validateUserExistence(userOptional);
+        User user = userOptional.get();
 
+        Optional<Room> roomOptional = roomRepository.findByJobIdAndParticipants(jobId, username);
         Room room = null;
-        if (roomOpt.isEmpty()) {
-            Job job = jobRepository.findById(jobId).get();
+        if (roomOptional.isEmpty()) {
+            Optional<Job> jobOptional = jobRepository.findById(jobId);
+            validateJobExistence(jobOptional);
+            Job job = jobOptional.get();
+
             room = createRoom(job);
             room = roomCrudRepository.save(room);
 
@@ -78,10 +109,16 @@ public class RoomServiceImpl implements RoomService {
             participant = createHostParticipant(room, job);
             participantRepository.save(participant);
         } else {
-            room = roomOpt.get();
+            room = roomOptional.get();
         }
 
         return this.roomMapper.toDTO(room);
+    }
+
+    private static void validateJobExistence(Optional<Job> jobOptional) throws ValidationException {
+        if (jobOptional.isEmpty()){
+            throw new ValidationException("job does not exists");
+        }
     }
 
 
@@ -93,7 +130,9 @@ public class RoomServiceImpl implements RoomService {
         }
         Room room = roomOpt.get();
         Long publishedId = room.getJob().getPublisher().getId();
-        return room.getParticipants().stream().filter(participant -> !participant.getUser().getId().equals(publishedId)).map(participant -> participant.getUser().getId()).findFirst();
+        return room.getParticipants().stream()
+                .filter(participant -> !participant.getUser().getId().equals(publishedId))
+                .map(participant -> participant.getUser().getId()).findFirst();
     }
 
     private static Room createRoom(Job job) {
@@ -134,9 +173,7 @@ public class RoomServiceImpl implements RoomService {
 
     @Override
     public MessageResponseDTO getMessages(String username, Long roomId, MessageRequestDTO messageRequestDTO) throws ValidationException {
-        if (!roomRepository.userBelongsToRoom(username, roomId)) {
-            throw new ValidationException("wrong room id");
-        }
+        validateUserToRoomBelonging(username, roomId);
         long currentOffsetRequest = messageRequestDTO.getOffsetRequest();
         long lastOffset = messageRequestDTO.getLastOffset();
         long count = roomRepository.countMessages(roomId);
@@ -149,7 +186,9 @@ public class RoomServiceImpl implements RoomService {
             currentOffsetRequest = count;
         }
         MessageResponseDTO response = new MessageResponseDTO();
-        response.setMessages(this.messageMapper.toListDTO(roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffsetRequest, count, limit)));
+        List<Message> messagesByUsernameAndRoomIdList = roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffsetRequest, count, limit);
+        List<MessageDTO> messageDTOList = this.messageMapper.toListDTO(messagesByUsernameAndRoomIdList);
+        response.setMessages(messageDTOList);
         long nextOffset = calculateNewOffset(messageRequestDTO, count);
         response.setNextOffset(nextOffset);
 
