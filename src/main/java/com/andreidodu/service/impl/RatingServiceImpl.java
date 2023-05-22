@@ -3,7 +3,6 @@ package com.andreidodu.service.impl;
 import com.andreidodu.dto.RatingDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.mapper.RatingMapper;
-import com.andreidodu.model.Job;
 import com.andreidodu.model.JobInstance;
 import com.andreidodu.model.Rating;
 import com.andreidodu.model.User;
@@ -15,6 +14,7 @@ import com.andreidodu.service.RatingService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.Optional;
 
 @Service
@@ -40,6 +40,42 @@ public class RatingServiceImpl implements RatingService {
             return updateRating(ratingDTO);
         }
 
+        validateSaveRatingInput(ratingDTO);
+        Optional<User> userTargetOpt = this.userRepository.findById(ratingDTO.getUserTargetId());
+        validateUserExistence(userTargetOpt);
+        Optional<User> userVoterOpt = this.userRepository.findById(ratingDTO.getUserVoterId());
+        validateUserExistence(userVoterOpt);
+
+        final Long jobInstanceId = ratingDTO.getJobInstanceId();
+        Optional<JobInstance> jobInstanceOptional = jobInstanceRepository.findById(jobInstanceId);
+        validateJobInstanceExistence(jobInstanceOptional);
+
+        Rating rating = createRatingModel(ratingDTO, userTargetOpt, userVoterOpt, jobInstanceOptional);
+        final Rating ratingSaved = this.ratingRepository.save(rating);
+        return this.ratingMapper.toDTO(ratingSaved);
+    }
+
+    private Rating createRatingModel(RatingDTO ratingDTO, Optional<User> userTargetOpt, Optional<User> userVoterOpt, Optional<JobInstance> jobInstanceOptional) {
+        Rating rating = this.ratingMapper.toModel(ratingDTO);
+        rating.setUserTarget(userTargetOpt.get());
+        rating.setUserVoter(userVoterOpt.get());
+        rating.setJobInstance(jobInstanceOptional.get());
+        return rating;
+    }
+
+    private static void validateJobInstanceExistence(Optional<JobInstance> jobInstanceOptional) throws ApplicationException {
+        if (jobInstanceOptional.isEmpty()) {
+            throw new ApplicationException("JobInstance not found");
+        }
+    }
+
+    private static void validateUserExistence(Optional<User> userTargetOpt) throws ApplicationException {
+        if (userTargetOpt.isEmpty()) {
+            throw new ApplicationException("User not found");
+        }
+    }
+
+    private static void validateSaveRatingInput(RatingDTO ratingDTO) throws ApplicationException {
         if (ratingDTO.getUserTargetId() == null) {
             throw new ApplicationException("User target id is null");
         }
@@ -52,45 +88,21 @@ public class RatingServiceImpl implements RatingService {
         if (ratingDTO.getUserVoterId().equals(ratingDTO.getUserTargetId())) {
             throw new ApplicationException("Voter matches with Target");
         }
-        Optional<User> userTargetOpt = this.userRepository.findById(ratingDTO.getUserTargetId());
-        if (userTargetOpt.isEmpty()) {
-            throw new ApplicationException("Target not found");
-        }
-        Optional<User> userVoterOpt = this.userRepository.findById(ratingDTO.getUserVoterId());
-        if (userVoterOpt.isEmpty()) {
-            throw new ApplicationException("Voter not found");
-        }
-
-        final Long jobInstanceId = ratingDTO.getJobInstanceId();
-        Optional<JobInstance> jobInstanceOptional = jobInstanceRepository.findById(jobInstanceId);
-        if (jobInstanceOptional.isEmpty()) {
-            throw new ApplicationException("JobInstance not found");
-        }
-        Job job = jobInstanceOptional.get().getJob();
-        Long authorId = job.getPublisher().getId();
-        Long workerId = authorId.equals(ratingDTO.getUserTargetId()) ? ratingDTO.getUserVoterId() : ratingDTO.getUserTargetId();
-
-        if (jobInstanceOptional.isEmpty()) {
-            throw new ApplicationException("JobInstance not found");
-        }
-
-        Rating rating = this.ratingMapper.toModel(ratingDTO);
-        rating.setUserTarget(userTargetOpt.get());
-        rating.setUserVoter(userVoterOpt.get());
-        rating.setJobInstance(jobInstanceOptional.get());
-        final Rating ratingSaved = this.ratingRepository.save(rating);
-        return this.ratingMapper.toDTO(ratingSaved);
     }
 
     private RatingDTO updateRating(RatingDTO ratingDTO) throws ApplicationException {
         Optional<Rating> ratingOptional = ratingRepository.findById(ratingDTO.getId());
-        if (ratingOptional.isEmpty()) {
-            throw new ApplicationException("Rating not found");
-        }
+        validateRatingExistence(ratingOptional);
         Rating rating = ratingOptional.get();
         rating.setRating(ratingDTO.getRating());
         rating.setComment(ratingDTO.getComment());
         return ratingMapper.toDTO(ratingRepository.save(rating));
+    }
+
+    private static void validateRatingExistence(Optional<Rating> ratingOptional) throws ApplicationException {
+        if (ratingOptional.isEmpty()) {
+            throw new ApplicationException("Rating not found");
+        }
     }
 
 }
