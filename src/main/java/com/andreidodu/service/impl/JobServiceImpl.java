@@ -17,7 +17,6 @@ import com.andreidodu.repository.JobRepository;
 import com.andreidodu.repository.UserRepository;
 import com.andreidodu.service.JobService;
 import com.andreidodu.util.ImageUtil;
-import com.andreidodu.validators.JobDTOValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -77,7 +76,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobDTO> getAllPublic(int type, int page) throws ApplicationException {
-        JobDTOValidator.validateJobType(type);
+        validateJobType(type);
         Pageable secondPageWithFiveElements = PageRequest.of(page, 10);
         List<Job> models = this.jobPageableRepository.findByTypeAndStatusIn(type, Arrays.asList(JobConst.STATUS_PUBLISHED), secondPageWithFiveElements);
         return this.jobMapper.toListDTO(models);
@@ -90,7 +89,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobDTO> getAllPrivate(String username, int type, int page) throws ApplicationException {
-        JobDTOValidator.validateJobType(type);
+        validateJobType(type);
         Pageable secondPageWithFiveElements = PageRequest.of(page, 10);
         List<Job> models = this.jobPageableRepository.findByTypeAndPublisher_username(type, username, secondPageWithFiveElements);
         return this.jobMapper.toListDTO(models);
@@ -103,7 +102,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobDTO> getAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username, int page) throws ApplicationException {
-        JobDTOValidator.validateJobType(type);
+        validateJobType(type);
         User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
         if (!isAdminSameRole(user)) {
             throw new ApplicationException("User is not admin");
@@ -111,6 +110,12 @@ public class JobServiceImpl implements JobService {
         Pageable pageable = PageRequest.of(page, 10);
         List<Job> models = this.jobPageableRepository.findByTypeAndStatusIn(type, statuses, pageable);
         return this.jobMapper.toListDTO(models);
+    }
+
+    private static void validateJobType(Integer jobType ) throws ValidationException {
+        if (!Arrays.asList(JobConst.TYPE_REQUEST, JobConst.TYPE_OFFER).contains(jobType)){
+            throw new ValidationException("Invalid job type");
+        }
     }
 
     @Override
@@ -280,6 +285,5 @@ public class JobServiceImpl implements JobService {
                 .map(jobPicture -> jobPicture.getPictureName())
                 .collect(Collectors.toList());
     }
-
 
 }
