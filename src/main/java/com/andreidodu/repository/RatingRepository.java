@@ -9,4 +9,6 @@ import java.util.Optional;
 
 public interface RatingRepository extends CrudRepository<Rating, Long> {
     Optional<Rating> findByJobInstance_idAndUserVoter_usernameAndUserTarget_id(Long jobInstanceId, String raterUsername, Long targetUserId);
+
+    List<Rating> findByUserTarget_username(String usernameTargetUser);
 }

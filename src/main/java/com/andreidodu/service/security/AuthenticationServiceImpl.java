@@ -10,6 +10,7 @@ import com.andreidodu.repository.UserPictureRepository;
 import com.andreidodu.repository.UserRepository;
 import com.andreidodu.service.AuthenticationService;
 import com.andreidodu.service.JwtService;
+import com.andreidodu.service.RatingService;
 import com.andreidodu.util.ImageUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -37,7 +38,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     private final JwtService jwtServiceImpl;
     private final AuthenticationManager authenticationManager;
     private final UserPictureMapper userPictureMapper;
-
+    private final RatingService ratingService;
 
     public AuthenticationResponseDTO register(RegisterRequestDTO request) throws NoSuchAlgorithmException, IOException {
         String encodedPassword = passwordEncoder.encode(request.getPassword());
@@ -80,7 +81,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         return userPicture;
     }
 
-    public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) {
+    public AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) throws ApplicationException {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getUsername(),
@@ -94,6 +95,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
         var refreshToken = jwtServiceImpl.generateRefreshToken(user);
         revokeAllUserTokens(user);
         saveUserToken(user, jwtToken);
+
+        ratingService.updateUserRating(request.getUsername());
+
         return AuthenticationResponseDTO.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)

@@ -10,4 +10,5 @@ public interface RatingService {
 
     RatingDTO save(RatingDTO ratingDTO, String raterUsername) throws ApplicationException;
 
+    void updateUserRating(String usernameTargetUser) throws ApplicationException;
 }

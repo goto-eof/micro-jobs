@@ -15,6 +15,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -104,5 +105,21 @@ public class RatingServiceImpl implements RatingService {
             throw new ApplicationException("Rating not found");
         }
     }
+
+    @Override
+    public void updateUserRating(final String usernameTargetUser) throws ApplicationException {
+        Optional<User> userTargetOptional = userRepository.findByUsername(usernameTargetUser);
+        validateUserExistence(userTargetOptional);
+        List<Rating> ratingList = this.ratingRepository.findByUserTarget_username(usernameTargetUser);
+        if (ratingList.isEmpty()) {
+            return;
+        }
+        Integer sumOfAllVotes = ratingList.stream().map(rating -> rating.getRating()).reduce(0, Integer::sum);
+        double rating = ((double) sumOfAllVotes) / ratingList.size();
+        User userTarget = userTargetOptional.get();
+        userTarget.setRating(rating);
+        userRepository.save(userTarget);
+    }
+
 
 }

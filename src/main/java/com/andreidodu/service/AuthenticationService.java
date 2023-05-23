@@ -18,7 +18,7 @@ public interface AuthenticationService {
 
     AuthenticationResponseDTO register(RegisterRequestDTO request) throws NoSuchAlgorithmException, IOException;
 
-    AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request);
+    AuthenticationResponseDTO authenticate(AuthenticationRequestDTO request) throws ApplicationException;
 
     AuthenticationResponseDTO refreshToken(HttpServletRequest request, HttpServletResponse response) throws IOException;
 

@@ -11,6 +11,7 @@ Micro Jobs is a small platform that allows users to offer or to request services
 - Liquibase;
 - PostgreSQL;
 - Gradle;
+- Docker;
 - Git.
 
 # Features
@@ -34,6 +35,14 @@ Micro Jobs is a small platform that allows users to offer or to request services
 
 # Job Instance status flow
 ![Database](JobStatusFlow.png)
+
+# Run it
+### Downlaod and run docker database image
+```
+sudo docker-compose up -d
+```
+### Run as spring boot project from your IDE (IntelliJ)
+The server will be reachable on port 8080
 
 # Default username and password
 ```
