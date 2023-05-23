@@ -58,16 +58,23 @@ public class JobPictureServiceImpl implements JobPictureService {
 
     @Override
     public JobPictureDTO update(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
-        if (!isJobPictureIdsSame(id, jobPictureDTO)) {
-            throw new ApplicationException("id not matching");
-        }
+        validateJobPictureIdMatching(id, jobPictureDTO);
+
         Optional<JobPicture> userOptional = this.jobPictureRepository.findById(id);
         validateUserExistence(userOptional);
+
         JobPicture jobPicture = userOptional.get();
         this.jobPictureMapper.getModelMapper().map(jobPictureDTO, jobPicture);
+
         JobPicture userSaved = this.jobPictureRepository.save(jobPicture);
         return this.jobPictureMapper.toDTO(userSaved);
 
+    }
+
+    private static void validateJobPictureIdMatching(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
+        if (!isJobPictureIdsSame(id, jobPictureDTO)) {
+            throw new ApplicationException("id not matching");
+        }
     }
 
     private static void validateUserExistence(Optional<JobPicture> userOptional) throws ApplicationException {

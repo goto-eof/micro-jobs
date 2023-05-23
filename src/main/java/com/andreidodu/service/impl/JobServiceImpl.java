@@ -148,9 +148,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public JobDTO save(JobDTO jobDTO, String username) throws ApplicationException {
-        if (jobDTO.getJobPictureList().size() > MAX_NUMBER_ATTACHED_PICTURES) {
-            throw new ValidationException("Maximum number of pictures allowed is " + MAX_NUMBER_ATTACHED_PICTURES);
-        }
+        validateMaNumberOfAttachments(jobDTO);
         Optional<User> userOpt = this.userRepository.findByUsername(username);
         if (userOpt.isEmpty()) {
             throw new ApplicationException("User not found");
@@ -212,23 +210,25 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobDTO changeJobStatus(Long jobId, int jobStatus, String usernameAdministrator) throws ApplicationException {
         User administrator = this.userRepository.findByUsername(usernameAdministrator).orElseThrow(() -> new ApplicationException("User not found"));
-        if (administrator.getRole() != Role.ADMIN) {
-            throw new ApplicationException("User is not admin");
-        }
+        validateRoleIsAdmin(administrator);
+
         Job job = this.jobRepository.findById(jobId).orElseThrow(() -> new ApplicationException("Job not found"));
         job.setStatus(jobStatus);
         Job jobSaved = this.jobRepository.save(job);
+
         return this.jobMapper.toDTO(jobSaved);
+    }
+
+    private static void validateRoleIsAdmin(User administrator) throws ApplicationException {
+        if (administrator.getRole() != Role.ADMIN) {
+            throw new ApplicationException("User is not admin");
+        }
     }
 
     @Override
     public JobDTO update(Long id, JobDTO jobDTO, String owner) throws ApplicationException {
-        if (!id.equals(jobDTO.getId())) {
-            throw new ValidationException("id not matching");
-        }
-        if (jobDTO.getJobPictureList().size() > MAX_NUMBER_ATTACHED_PICTURES) {
-            throw new ValidationException("Maximum number of pictures allowed is " + MAX_NUMBER_ATTACHED_PICTURES);
-        }
+        validateJobIdMatch(id, jobDTO);
+        validateMaNumberOfAttachments(jobDTO);
         Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("job not found"));
         if (!isSameUsername(owner, job.getPublisher())) {
             throw new ApplicationException("wrong user");
@@ -244,6 +244,18 @@ public class JobServiceImpl implements JobService {
             job = this.jobRepository.save(job);
         }
         return this.jobMapper.toDTO(jobSaved);
+    }
+
+    private static void validateMaNumberOfAttachments(JobDTO jobDTO) throws ValidationException {
+        if (jobDTO.getJobPictureList().size() > MAX_NUMBER_ATTACHED_PICTURES) {
+            throw new ValidationException("Maximum number of pictures allowed is " + MAX_NUMBER_ATTACHED_PICTURES);
+        }
+    }
+
+    private static void validateJobIdMatch(Long id, JobDTO jobDTO) throws ValidationException {
+        if (!id.equals(jobDTO.getId())) {
+            throw new ValidationException("id not matching");
+        }
     }
 
     private Iterable<JobPicture> saveJobPicturesInDTOList(JobDTO jobDTO, Job jobSaved) {
