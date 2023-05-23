@@ -37,7 +37,7 @@ Micro Jobs is a small platform that allows users to offer or to request services
 ![Database](JobStatusFlow.png)
 
 # Run it
-### Downlaod and run docker database image
+### Download and run docker database image
 ```
 sudo docker-compose up -d
 ```
