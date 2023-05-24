@@ -8,6 +8,7 @@ import com.andreidodu.model.JobPicture;
 import com.andreidodu.repository.JobPictureRepository;
 import com.andreidodu.repository.JobRepository;
 import com.andreidodu.service.JobPictureService;
+import com.andreidodu.util.CommonValidationUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class JobPictureServiceImpl implements JobPictureService {
 
     private static Supplier<ApplicationException> supplyJobPictureNotFoundException = () -> new ApplicationException("JobPicture not found");
     private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
-    private static BiPredicate<Long, Long> isSameId = (id1, id2) -> id1.equals(id2);
+
     private Function<Long, Optional<JobPicture>> retrieveJobPicture;
     private Function<JobPicture, JobPictureDTO> saveJobPicture;
     private Function<Long, Optional<Job>> retrieveJob;
@@ -84,7 +85,7 @@ public class JobPictureServiceImpl implements JobPictureService {
     }
 
     private static void validateJobPictureIdMatching(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
-        if (!isSameId.test(id, jobPictureDTO.getId())) {
+        if (!CommonValidationUtil.isSameId.test(id, jobPictureDTO.getId())) {
             throw new ApplicationException("id not matching");
         }
     }

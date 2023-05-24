@@ -12,13 +12,13 @@ import com.andreidodu.repository.JobInstanceRepository;
 import com.andreidodu.repository.JobRepository;
 import com.andreidodu.repository.UserRepository;
 import com.andreidodu.service.JobInstanceService;
+import com.andreidodu.util.CommonValidationUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 @Service
@@ -31,7 +31,6 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     private final UserRepository userRepository;
     private final JobInstanceMapper jobInstanceMapper;
 
-    private static Predicate<Object> isNull = value -> value == null;
     private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
     private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ValidationException("Job not found");
     private static Supplier<ApplicationException> supplyUserNotFountException = () -> new ApplicationException("User not found");
@@ -58,13 +57,13 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     }
 
     private static void validateWorkerId(Long workerId) throws ValidationException {
-        if (isNull.test(workerId)) {
+        if (CommonValidationUtil.isNull.test(workerId)) {
             throw new ValidationException("workerId is null");
         }
     }
 
     private static void validateJobId(Long jobId) throws ValidationException {
-        if (isNull.test(jobId)) {
+        if (CommonValidationUtil.isNull.test(jobId)) {
             throw new ValidationException("jobId is null");
         }
     }
@@ -84,7 +83,7 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     }
 
     private static void validateJobInstanceStatus(Integer jobInstanceStatus) throws ValidationException {
-        if (isNull.test(jobInstanceStatus)) {
+        if (CommonValidationUtil.isNull.test(jobInstanceStatus)) {
             throw new ValidationException("Invalid JobInstance status");
         }
     }
