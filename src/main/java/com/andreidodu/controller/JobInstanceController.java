@@ -25,7 +25,7 @@ public class JobInstanceController {
     }
 
     @PostMapping("/jobId/{jobId}/workerId/{workerId}/jobInstanceStatus/{jobInstanceStatus}")
-    public ResponseEntity<JobInstanceDTO> workProviderChangeJobInstanceStatus(@PathVariable Long jobId,@PathVariable Long workerId, @PathVariable Integer jobInstanceStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ValidationException {
+    public ResponseEntity<JobInstanceDTO> workProviderChangeJobInstanceStatus(@PathVariable Long jobId,@PathVariable Long workerId, @PathVariable Integer jobInstanceStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
         return ResponseEntity.ok(this.jobInstanceService.workProviderChangeJobInstanceStatus(jobId, jwtService.extractUsernameFromAuthorizzation(authorization), workerId, jobInstanceStatus));
     }
 

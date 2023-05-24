@@ -10,7 +10,7 @@ public interface JobInstanceService {
 
     JobInstanceDTO getJobInstanceInfo(Long jobId, String workerUsername, Long workerId) throws ValidationException;
 
-    JobInstanceDTO workProviderChangeJobInstanceStatus(Long jobId, String workerUsername, Long workerId, Integer jobInstanceStatus) throws ValidationException;
+    JobInstanceDTO workProviderChangeJobInstanceStatus(Long jobId, String workerUsername, Long workerId, Integer jobInstanceStatus) throws ValidationException, ApplicationException;
 
     JobInstanceDTO workerChangeJobInstanceStatus(Long jobId, String workerUsername, Integer jobInstanceStatus) throws ApplicationException;
 

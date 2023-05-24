@@ -12,10 +12,15 @@ import com.andreidodu.repository.JobInstanceRepository;
 import com.andreidodu.repository.JobRepository;
 import com.andreidodu.repository.UserRepository;
 import com.andreidodu.service.JobInstanceService;
+import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -27,39 +32,83 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     private final UserRepository userRepository;
     private final JobInstanceMapper jobInstanceMapper;
 
+    private static Predicate<Object> isNull = value -> value == null;
+    private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
+    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ValidationException("Job not found");
+    private static Supplier<ApplicationException> supplyUserNotFountException = () -> new ApplicationException("User not found");
+    private Function<JobInstance, JobInstanceDTO> saveAndReturnJobInstanceDTO;
+
+    @PostConstruct
+    private void postConstruct() {
+        this.saveAndReturnJobInstanceDTO = (jobInstance) -> jobInstanceMapper.toDTO(jobInstanceRepository.save(jobInstance));
+    }
+
     @Override
     public JobInstanceDTO getJobInstanceInfo(Long jobId, String workerUsername, Long workerId) throws ValidationException {
-        Optional<JobInstance> foundJobInstance = jobInstanceRepository.findByJob_idAndUserWorker_id(jobId, workerId);
-        return foundJobInstance.map(jobInstance -> jobInstanceMapper.toDTO(jobInstance))
+        validateJobId(jobId);
+        validateWorkerId(workerId);
+
+        Optional<JobInstance> jobInstanceOptional = retrieveJobInstanceByJobIdAndWorkerId(jobId, workerId);
+
+        return jobInstanceOptional.map(jobInstance -> jobInstanceMapper.toDTO(jobInstance))
                 .orElseGet(() -> this.jobInstanceMapper.toDTO(createJobInstance(jobId, workerId)));
     }
 
-    @Override
-    public JobInstanceDTO workProviderChangeJobInstanceStatus(Long jobId, String workProviderUsername, Long workerId, Integer jobInstanceStatus) throws ValidationException {
-        Optional<JobInstance> jobInstanceOptional = jobInstanceRepository.findByJob_idAndUserWorker_id(jobId, workerId);
-        validateJobInstanceExistence(jobInstanceOptional);
-        final JobInstance jobInstance = jobInstanceOptional.get();
-        jobInstance.setStatus(jobInstanceStatus);
-        final JobInstance updatedJobInstance = jobInstanceRepository.save(jobInstance);
-        return jobInstanceMapper.toDTO(updatedJobInstance);
+    private Optional<JobInstance> retrieveJobInstanceByJobIdAndWorkerId(Long jobId, Long workerId) {
+        return jobInstanceRepository.findByJob_idAndUserWorker_id(jobId, workerId);
     }
 
-    private static void validateJobInstanceExistence(Optional<JobInstance> jobInstanceOptional) throws ValidationException {
-        if (jobInstanceOptional.isEmpty()) {
-            throw new ValidationException("jobInstanceNotFound");
+    private static void validateWorkerId(Long workerId) throws ValidationException {
+        if (isNull.test(workerId)) {
+            throw new ValidationException("workerId is null");
+        }
+    }
+
+    private static void validateJobId(Long jobId) throws ValidationException {
+        if (isNull.test(jobId)) {
+            throw new ValidationException("jobId is null");
+        }
+    }
+
+    @Override
+    public JobInstanceDTO workProviderChangeJobInstanceStatus(Long jobId, String workProviderUsername, Long workerId, Integer jobInstanceStatus) throws ApplicationException, ValidationException {
+        validateJobId(jobId);
+        validateWorkerId(workerId);
+        validateJobInstanceStatus(jobInstanceStatus);
+
+        JobInstance jobInstance = retrieveJobInstanceByJobIdAndWorkerId(jobId, workerId)
+                .orElseThrow(supplyJobInstanceNotFoundException);
+
+        jobInstance.setStatus(jobInstanceStatus);
+
+        return saveAndReturnJobInstanceDTO.apply(jobInstance);
+    }
+
+    private static void validateJobInstanceStatus(Integer jobInstanceStatus) throws ValidationException {
+        if (isNull.test(jobInstanceStatus)) {
+            throw new ValidationException("Invalid JobInstance status");
         }
     }
 
     @Override
     public JobInstanceDTO workerChangeJobInstanceStatus(Long jobId, String workerUsername, Integer jobInstanceStatus) throws ApplicationException {
-        Optional<JobInstance> foundJobInstanceOptional = jobInstanceRepository.findByJob_idAndUserWorker_Username(jobId, workerUsername);
+        validateJobId(jobId);
+        validateJobInstanceStatus(jobInstanceStatus);
+
+        Optional<JobInstance> foundJobInstanceOptional = retrieveJobInstanceByJobIdAndWorkerUsername(jobId, workerUsername);
         validateJobInstanceForChangeStatus(jobInstanceStatus, foundJobInstanceOptional);
+
         if (foundJobInstanceOptional.isEmpty()) {
             foundJobInstanceOptional = Optional.of(createJobInstance(jobId, workerUsername));
         }
+
         final JobInstance jobInstance = foundJobInstanceOptional.get();
         jobInstance.setStatus(jobInstanceStatus);
         return jobInstanceMapper.toDTO(this.jobInstanceRepository.save(jobInstance));
+    }
+
+    private Optional<JobInstance> retrieveJobInstanceByJobIdAndWorkerUsername(Long jobId, String workerUsername) {
+        return jobInstanceRepository.findByJob_idAndUserWorker_Username(jobId, workerUsername);
     }
 
     private static void validateJobInstanceForChangeStatus(Integer jobInstanceStatus, Optional<JobInstance> foundJobInstanceOptional) throws ApplicationException {
@@ -73,13 +122,13 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     }
 
 
-    private JobInstance createJobInstance(Long jobId, String username) throws ValidationException {
-        Optional<Job> jobOptional = this.jobRepository.findById(jobId);
-        validateJobExistence(jobOptional);
-        Optional<User> userOptional = this.userRepository.findByUsername(username);
-        validateUserExistence(userOptional);
-        Job job = jobOptional.get();
-        User worker = userOptional.get();
+    private JobInstance createJobInstance(Long jobId, String username) throws ApplicationException {
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
+        User worker = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFountException);
+
 
         JobInstance jobInstance = new JobInstance();
         jobInstance.setStatus(JobInstanceConst.STATUS_CREATED);
@@ -90,22 +139,18 @@ public class JobInstanceServiceImpl implements JobInstanceService {
         return this.jobInstanceRepository.save(jobInstance);
     }
 
-    private static void validateUserExistence(Optional<User> userOptional) throws ValidationException {
-        if (userOptional.isEmpty()){
-            throw new ValidationException("user not found");
-        }
+    private Optional<Job> retrieveJob(Long jobId) {
+        return this.jobRepository.findById(jobId);
     }
 
-    private static void validateJobExistence(Optional<Job> jobOptional) throws ValidationException {
-        if (jobOptional.isEmpty()) {
-            throw new ValidationException("job not found");
-        }
+    private Optional<User> retrieveUserByUsername(String username) {
+        return this.userRepository.findByUsername(username);
     }
 
 
     private JobInstance createJobInstance(Long jobId, Long workerId) {
-        Optional<Job> jobOptional = this.jobRepository.findById(jobId);
-        Optional<User> workerOptional = this.userRepository.findById(workerId);
+        Optional<Job> jobOptional = retrieveJob(jobId);
+        Optional<User> workerOptional = retrieveUserById(workerId);
 
         Job job = jobOptional.get();
         User worker = workerOptional.get();
@@ -117,6 +162,10 @@ public class JobInstanceServiceImpl implements JobInstanceService {
         jobInstance.setUserCustomer(job.getPublisher());
 
         return this.jobInstanceRepository.save(jobInstance);
+    }
+
+    private Optional<User> retrieveUserById(Long workerId) {
+        return this.userRepository.findById(workerId);
     }
 
 }
