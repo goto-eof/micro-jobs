@@ -12,12 +12,14 @@ import com.andreidodu.repository.RatingRepository;
 import com.andreidodu.repository.UserRepository;
 import com.andreidodu.service.RatingService;
 import com.andreidodu.util.CommonValidationUtil;
+import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 @Service
@@ -33,6 +35,12 @@ public class RatingServiceImpl implements RatingService {
     private static Supplier<ApplicationException> supplyUserTargetNotFoundException = () -> new ApplicationException("userTarget not found");
     private static Supplier<ApplicationException> supplyUserVoterNotFoundException = () -> new ApplicationException("userVoter not found");
     private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
+    private Function<Rating, RatingDTO> saveRatingAndReturnDTO;
+
+    @PostConstruct
+    private void postConstruct() {
+        saveRatingAndReturnDTO = rating -> this.ratingMapper.toDTO(this.ratingRepository.save(rating));
+    }
 
     @Override
     public Optional<RatingDTO> get(Long jobInstanceId, String raterUsername, Long targetUserId) throws ApplicationException {
@@ -80,8 +88,7 @@ public class RatingServiceImpl implements RatingService {
 
         Rating rating = createRatingModel(ratingDTO, userTarget, userVoter, jobInstance);
 
-        final Rating ratingSaved = this.ratingRepository.save(rating);
-        return this.ratingMapper.toDTO(ratingSaved);
+        return saveRatingAndReturnDTO.apply(rating);
     }
 
     private Optional<JobInstance> retrieveJobInstance(Long jobInstanceId) {
@@ -101,14 +108,10 @@ public class RatingServiceImpl implements RatingService {
     }
 
     private static void validateSaveRatingInput(RatingDTO ratingDTO) throws ApplicationException {
-        if (CommonValidationUtil.isNull.test(ratingDTO.getUserTargetId())) {
-            throw new ApplicationException("User target id is null");
-        }
+        validateTargetUserId(ratingDTO.getUserTargetId());
+        validateJobInstanceId(ratingDTO.getJobInstanceId());
         if (CommonValidationUtil.isNull.test(ratingDTO.getUserVoterId())) {
             throw new ApplicationException("User voter id is null");
-        }
-        if (CommonValidationUtil.isNull.test(ratingDTO.getJobInstanceId())) {
-            throw new ApplicationException("JobInstance id is null");
         }
         if (CommonValidationUtil.isSameId.test(ratingDTO.getUserVoterId(), ratingDTO.getUserTargetId())) {
             throw new ApplicationException("Voter matches with Target");
@@ -121,7 +124,8 @@ public class RatingServiceImpl implements RatingService {
         Rating rating = ratingOptional.get();
         rating.setRating(ratingDTO.getRating());
         rating.setComment(ratingDTO.getComment());
-        return ratingMapper.toDTO(ratingRepository.save(rating));
+
+        return saveRatingAndReturnDTO.apply(rating);
     }
 
     private static void validateRatingExistence(Optional<Rating> ratingOptional) throws ApplicationException {
@@ -148,8 +152,7 @@ public class RatingServiceImpl implements RatingService {
 
     private static double calculateNewRating(List<Rating> ratingList) {
         Integer sumOfAllVotes = ratingList.stream().map(rating -> rating.getRating()).reduce(0, Integer::sum);
-        double rating = ((double) sumOfAllVotes) / ratingList.size();
-        return rating;
+        return ((double) sumOfAllVotes) / ratingList.size();
     }
 
     private List<Rating> retrieveRatingList(String usernameTargetUser) {
