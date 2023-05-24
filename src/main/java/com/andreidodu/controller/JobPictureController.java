@@ -47,7 +47,7 @@ public class JobPictureController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<DeleteStatusDTO> delete(@PathVariable Long id) {
+    public ResponseEntity<DeleteStatusDTO> delete(@PathVariable Long id) throws ApplicationException {
         this.jobPictureService.delete(id);
         return ResponseEntity.ok(new DeleteStatusDTO(true));
     }

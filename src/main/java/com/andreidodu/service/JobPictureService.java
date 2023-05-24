@@ -6,7 +6,7 @@ import com.andreidodu.exception.ApplicationException;
 public interface JobPictureService {
     JobPictureDTO get(Long id) throws ApplicationException;
 
-    void delete(Long id);
+    void delete(Long id) throws ApplicationException;
 
     JobPictureDTO save(JobPictureDTO jobPictureDTO) throws ApplicationException;
 

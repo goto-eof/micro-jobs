@@ -8,10 +8,15 @@ import com.andreidodu.model.JobPicture;
 import com.andreidodu.repository.JobPictureRepository;
 import com.andreidodu.repository.JobRepository;
 import com.andreidodu.service.JobPictureService;
+import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.Optional;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -22,69 +27,67 @@ public class JobPictureServiceImpl implements JobPictureService {
     private final JobRepository jobRepository;
     private final JobPictureMapper jobPictureMapper;
 
-    @Override
-    public JobPictureDTO get(Long id) throws ApplicationException {
-        Optional<JobPicture> jobPictureOptional = this.jobPictureRepository.findById(id);
-        validateJobPictureExistence(jobPictureOptional);
-        return this.jobPictureMapper.toDTO(jobPictureOptional.get());
+    private static Supplier<ApplicationException> supplyJobPictureNotFoundException = () -> new ApplicationException("JobPicture not found");
+    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+    private static BiPredicate<Long, Long> isSameId = (id1, id2) -> id1.equals(id2);
+    private Function<Long, Optional<JobPicture>> retrieveJobPicture;
+    private Function<JobPicture, JobPictureDTO> saveJobPicture;
+    private Function<Long, Optional<Job>> retrieveJob;
+
+    @PostConstruct
+    private void postConstruct() {
+        saveJobPicture = (jobPicture) -> this.jobPictureMapper.toDTO(this.jobPictureRepository.save(jobPicture));
+        retrieveJobPicture = jobPictureId -> jobPictureRepository.findById(jobPictureId);
+        retrieveJob = (jobId) -> this.jobRepository.findById(jobId);
     }
 
-    private static void validateJobPictureExistence(Optional<JobPicture> jobPictureOptional) throws ApplicationException {
-        if (jobPictureOptional.isEmpty()) {
-            throw new ApplicationException("JobPicture not found");
-        }
+    @Override
+    public JobPictureDTO get(Long jobPictureId) throws ApplicationException {
+        JobPicture jobPicture = retrieveJobPicture.apply(jobPictureId)
+                .orElseThrow(supplyJobPictureNotFoundException);
+        return this.jobPictureMapper.toDTO(jobPicture);
     }
 
     @Override
-    public void delete(Long id) {
-        this.jobPictureRepository.deleteById(id);
+    public void delete(Long jobPictureId) throws ApplicationException {
+        JobPicture jobPicture = retrieveJobPicture.apply(jobPictureId)
+                .orElseThrow(supplyJobPictureNotFoundException);
+        this.jobPictureRepository.delete(jobPicture);
     }
 
     @Override
     public JobPictureDTO save(JobPictureDTO jobPictureDTO) throws ApplicationException {
-        Optional<Job> job = this.jobRepository.findById(jobPictureDTO.getJobId());
-        validateJobExistence(job);
-        JobPicture model = this.jobPictureMapper.toModel(jobPictureDTO);
-        model.setJob(job.get());
-        final JobPicture jobPicture = this.jobPictureRepository.save(model);
-        return this.jobPictureMapper.toDTO(jobPicture);
-    }
+        Job job = retrieveJob.apply(jobPictureDTO.getJobId())
+                .orElseThrow(supplyJobNotFoundException);
 
-    private static void validateJobExistence(Optional<Job> job) throws ApplicationException {
-        if (job.isEmpty()) {
-            throw new ApplicationException("Job not found");
-        }
+        JobPicture model = this.jobPictureMapper.toModel(jobPictureDTO);
+        model.setJob(job);
+
+        return saveJobPicture.apply(model);
     }
 
     @Override
     public JobPictureDTO update(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
         validateJobPictureIdMatching(id, jobPictureDTO);
 
-        Optional<JobPicture> userOptional = this.jobPictureRepository.findById(id);
-        validateUserExistence(userOptional);
+        JobPicture jobPicture = retrieveJobPicture.apply(id)
+                .orElseThrow(supplyJobPictureNotFoundException);
 
-        JobPicture jobPicture = userOptional.get();
-        this.jobPictureMapper.getModelMapper().map(jobPictureDTO, jobPicture);
+        copyJobPictureDtoPropertiesToModel(jobPictureDTO, jobPicture);
 
-        JobPicture userSaved = this.jobPictureRepository.save(jobPicture);
-        return this.jobPictureMapper.toDTO(userSaved);
+        return saveJobPicture.apply(jobPicture);
 
     }
 
+    private void copyJobPictureDtoPropertiesToModel(JobPictureDTO jobPictureDTO, JobPicture jobPicture) {
+        this.jobPictureMapper.getModelMapper().map(jobPictureDTO, jobPicture);
+    }
+
     private static void validateJobPictureIdMatching(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
-        if (!isJobPictureIdsSame(id, jobPictureDTO)) {
+        if (!isSameId.test(id, jobPictureDTO.getId())) {
             throw new ApplicationException("id not matching");
         }
     }
 
-    private static void validateUserExistence(Optional<JobPicture> userOptional) throws ApplicationException {
-        if (userOptional.isEmpty()) {
-            throw new ApplicationException("job not found");
-        }
-    }
-
-    private static boolean isJobPictureIdsSame(Long id, JobPictureDTO jobPictureDTO) {
-        return id.equals(jobPictureDTO.getId());
-    }
 
 }
