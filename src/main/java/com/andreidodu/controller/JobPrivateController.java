@@ -4,7 +4,6 @@ import com.andreidodu.constants.JobConst;
 import com.andreidodu.dto.JobDTO;
 import com.andreidodu.dto.JobListPageDTO;
 import com.andreidodu.exception.ApplicationException;
-import com.andreidodu.exception.ValidationException;
 import com.andreidodu.service.JobInstanceService;
 import com.andreidodu.service.JobService;
 import com.andreidodu.service.JwtService;
@@ -57,9 +56,9 @@ public class JobPrivateController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/admin/jobStatus/{jobStatus}/jobId/{jobId}")
-    public ResponseEntity<JobDTO> getPrivateByStatus(@PathVariable Long jobId, @PathVariable Integer jobStatus, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
-        return ResponseEntity.ok(this.jobService.getPrivateByStatus(jobId, jobStatus, jwtService.extractUsernameFromAuthorizzation(authorization)));
+    @GetMapping("/admin/jobId/{jobId}")
+    public ResponseEntity<JobDTO> getPrivateByAdmin(@PathVariable Long jobId, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization) throws ApplicationException {
+        return ResponseEntity.ok(this.jobService.getPrivateByAdmin(jobId, jwtService.extractUsernameFromAuthorizzation(authorization)));
     }
 
     @PostMapping

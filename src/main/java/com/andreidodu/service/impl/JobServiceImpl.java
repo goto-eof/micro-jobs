@@ -27,12 +27,15 @@ import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(Transactional.TxType.REQUIRED)
 public class JobServiceImpl implements JobService {
+    private final static int NUMBER_OF_ITEMS_PER_PAGE = 10;
+
     private static Integer MAX_NUMBER_ATTACHED_PICTURES = 5;
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
@@ -40,34 +43,88 @@ public class JobServiceImpl implements JobService {
     private final JobPictureRepository jobPictureRepository;
     private final JobMapper jobMapper;
 
+    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+    private static Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("User not found");
+
     @Override
-    public JobDTO getPrivate(final Long id, final String username) throws ApplicationException {
-        Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("Job not found"));
+    public JobDTO getPrivate(final Long jobId, final String username) throws ApplicationException {
+        validateJobId(jobId);
+        validateUsername(username);
+
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
         User publisher = job.getPublisher();
-        if (!isSameUsername(username, publisher)) {
+
+        validateSameUsername(username, publisher.getUsername());
+
+        return this.jobMapper.toDTO(job);
+    }
+
+    private void validateJobId(Long jobId) throws ValidationException {
+        if (jobId == null) {
+            throw new ValidationException("jobId is null");
+        }
+    }
+
+    private void validateUsername(String username) throws ValidationException {
+        if (username == null) {
+            throw new ValidationException("username is null");
+        }
+    }
+
+    private Optional<Job> retrieveJob(Long id) {
+        return this.jobRepository.findById(id);
+    }
+
+    private static void validateSameUsername(String username, String publisherUsername) throws ApplicationException {
+        if (!isSameUsername(username, publisherUsername)) {
             throw new ApplicationException("User not match");
         }
-        return this.jobMapper.toDTO(job);
     }
 
-    private static boolean isSameUsername(String username, User publisher) {
-        return publisher.getUsername().equals(username);
-    }
-
-    @Override
-    public JobDTO getPublic(Long id) throws ApplicationException {
-        Job job = this.jobRepository.findByIdAndStatus(id, JobConst.STATUS_PUBLISHED).orElseThrow(() -> new ApplicationException("Job not found"));
-        return this.jobMapper.toDTO(job);
+    private static boolean isSameUsername(String username, String publisherUsername) {
+        return publisherUsername.equals(username);
     }
 
     @Override
-    public JobDTO getPrivateByStatus(Long id, Integer jobStatus, String username) throws ApplicationException {
-        User administrator = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
+    public JobDTO getPublic(Long jobId) throws ApplicationException {
+        validateJobId(jobId);
+
+        Job job = findJobPublished(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
+        return this.jobMapper.toDTO(job);
+    }
+
+    private Optional<Job> findJobPublished(Long jobId) {
+        return this.jobRepository.findByIdAndStatus(jobId, JobConst.STATUS_PUBLISHED);
+    }
+
+    @Override
+    public JobDTO getPrivateByAdmin(Long jobId, String username) throws ApplicationException {
+        validateJobId(jobId);
+        validateUsername(username);
+
+        User administrator = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
+
+        validateMakeSureIsAdmin(administrator);
+
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
+        return this.jobMapper.toDTO(job);
+    }
+
+    private static void validateMakeSureIsAdmin(User administrator) throws ValidationException {
         if (!isAdminSameRole(administrator)) {
             throw new ValidationException("User is not admin");
         }
-        Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("Job not found"));
-        return this.jobMapper.toDTO(job);
+    }
+
+    private Optional<User> retrieveUserByUsername(String username) {
+        return this.userRepository.findByUsername(username);
     }
 
     private static boolean isAdminSameRole(User administrator) {
@@ -77,9 +134,16 @@ public class JobServiceImpl implements JobService {
     @Override
     public List<JobDTO> getAllPublic(int type, int page) throws ApplicationException {
         validateJobType(type);
-        Pageable secondPageWithFiveElements = PageRequest.of(page, 10);
-        List<Job> models = this.jobPageableRepository.findByTypeAndStatusIn(type, Arrays.asList(JobConst.STATUS_PUBLISHED), secondPageWithFiveElements);
+
+        Pageable pageRequest = PageRequest.of(page, NUMBER_OF_ITEMS_PER_PAGE);
+        List<Integer> allowedStatuses = Arrays.asList(JobConst.STATUS_PUBLISHED);
+        List<Job> models = retrieveJobs(type, pageRequest, allowedStatuses);
+
         return this.jobMapper.toListDTO(models);
+    }
+
+    private List<Job> retrieveJobs(int type, Pageable pageRequest, List<Integer> allowedStatuses) {
+        return this.jobPageableRepository.findByTypeAndStatusIn(type, allowedStatuses, pageRequest);
     }
 
     @Override
@@ -90,9 +154,16 @@ public class JobServiceImpl implements JobService {
     @Override
     public List<JobDTO> getAllPrivate(String username, int type, int page) throws ApplicationException {
         validateJobType(type);
-        Pageable secondPageWithFiveElements = PageRequest.of(page, 10);
-        List<Job> models = this.jobPageableRepository.findByTypeAndPublisher_username(type, username, secondPageWithFiveElements);
+        validateUsername(username);
+
+        Pageable pageRequest = PageRequest.of(page, NUMBER_OF_ITEMS_PER_PAGE);
+        List<Job> models = retrieveJobsByUsername(username, type, pageRequest);
+
         return this.jobMapper.toListDTO(models);
+    }
+
+    private List<Job> retrieveJobsByUsername(String username, int type, Pageable pageRequest) {
+        return this.jobPageableRepository.findByTypeAndPublisher_username(type, username, pageRequest);
     }
 
     @Override
@@ -102,40 +173,70 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public List<JobDTO> getAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username, int page) throws ApplicationException {
+        validateUsername(username);
         validateJobType(type);
-        User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
-        if (!isAdminSameRole(user)) {
-            throw new ApplicationException("User is not admin");
-        }
-        Pageable pageable = PageRequest.of(page, 10);
-        List<Job> models = this.jobPageableRepository.findByTypeAndStatusIn(type, statuses, pageable);
+
+        User user = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
+
+        validateMakeSureIsAdmin(user);
+
+        Pageable pageRequest = PageRequest.of(page, NUMBER_OF_ITEMS_PER_PAGE);
+        List<Job> models = retrieveJobs(type, pageRequest, statuses);
+
         return this.jobMapper.toListDTO(models);
     }
 
-    private static void validateJobType(Integer jobType ) throws ValidationException {
-        if (!Arrays.asList(JobConst.TYPE_REQUEST, JobConst.TYPE_OFFER).contains(jobType)){
+    private static void validateJobType(Integer jobType) throws ValidationException {
+        if (!Arrays.asList(JobConst.TYPE_REQUEST, JobConst.TYPE_OFFER).contains(jobType)) {
             throw new ValidationException("Invalid job type");
         }
     }
 
     @Override
     public long countAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username) throws ApplicationException {
-        User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
-        if (!Role.ADMIN.equals(user.getRole())) {
+        validateUsername(username);
+
+        User user = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
+
+        validateMakeSureIsAdminByRole(user.getRole());
+
+        return this.jobRepository.countByTypeAndStatusIn(type, statuses);
+    }
+
+    private static void validateMakeSureIsAdminByRole(Role role) throws ApplicationException {
+        if (!Role.ADMIN.equals(role)) {
             throw new ApplicationException("User is not admin");
         }
-        return this.jobRepository.countByTypeAndStatusIn(type, statuses);
     }
 
     @Override
     public void delete(Long jobId, String username) throws ApplicationException {
-        User user = this.userRepository.findByUsername(username).orElseThrow(() -> new ApplicationException("User not found"));
-        Job job = this.jobRepository.findById(jobId).orElseThrow(() -> new ApplicationException("Job does not exists"));
-        // TODO add also the administrator here
-        if (!isSameUsername(job.getPublisher().getUsername(), user)) {
+        validateJobId(jobId);
+        validateUsername(username);
+
+        User user = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
+
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
+        User publisher = job.getPublisher();
+        validateMakeSureIsJobAuthor(user, publisher);
+
+        deleteFilesFromDisk(job.getJobPictureList());
+
+        deleteJob(jobId, username);
+    }
+
+    private static void validateMakeSureIsJobAuthor(User user, User publisher) throws ValidationException {
+        if (!isSameUsername(publisher.getUsername(), user.getUsername())) {
             throw new ValidationException("You are nto allowed to do this operation");
         }
-        deleteFilesFromDisk(job.getJobPictureList());
+    }
+
+    private void deleteJob(Long jobId, String username) {
         this.jobRepository.deleteByIdAndPublisher_Username(jobId, username);
     }
 
@@ -148,22 +249,32 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public JobDTO save(JobDTO jobDTO, String username) throws ApplicationException {
+        validateUsername(username);
         validateMaNumberOfAttachments(jobDTO);
-        Optional<User> userOpt = this.userRepository.findByUsername(username);
-        if (userOpt.isEmpty()) {
-            throw new ApplicationException("User not found");
-        }
+
+        User author = retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
+
         jobDTO.setStatus(JobConst.STATUS_CREATED);
+
         Job model = this.jobMapper.toModel(jobDTO);
-        model.setPublisher(userOpt.get());
+        model.setPublisher(author);
         Job job = this.jobRepository.save(model);
+
         Iterable<JobPicture> savedJobPictureList = saveJobPictureModelList(jobDTO.getJobPictureList(), job);
+
+        job = saveJobMainPicture(job, savedJobPictureList);
+
+        return this.jobMapper.toDTO(job);
+    }
+
+    private Job saveJobMainPicture(Job job, Iterable<JobPicture> savedJobPictureList) {
         final Optional<String> mainPictureName = extractMainJobPicture(savedJobPictureList);
         if (mainPictureName.isPresent()) {
             job.setPicture(mainPictureName.get());
             job = this.jobRepository.save(job);
         }
-        return this.jobMapper.toDTO(job);
+        return job;
     }
 
     private Optional<String> extractMainJobPicture(Iterable<JobPicture> savedJobPictureList) {
@@ -209,10 +320,16 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public JobDTO changeJobStatus(Long jobId, int jobStatus, String usernameAdministrator) throws ApplicationException {
-        User administrator = this.userRepository.findByUsername(usernameAdministrator).orElseThrow(() -> new ApplicationException("User not found"));
+        validateJobId(jobId);
+
+        User administrator = retrieveUserByUsername(usernameAdministrator)
+                .orElseThrow(supplyUserNotFoundException);
+
         validateRoleIsAdmin(administrator);
 
-        Job job = this.jobRepository.findById(jobId).orElseThrow(() -> new ApplicationException("Job not found"));
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
         job.setStatus(jobStatus);
         Job jobSaved = this.jobRepository.save(job);
 
@@ -226,24 +343,36 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public JobDTO update(Long id, JobDTO jobDTO, String owner) throws ApplicationException {
-        validateJobIdMatch(id, jobDTO);
+    public JobDTO update(Long jobId, JobDTO jobDTO, String ownerUsername) throws ApplicationException {
+        validateJobId(jobId);
+        validateUsername(ownerUsername);
+        validateJobIdMatch(jobId, jobDTO);
         validateMaNumberOfAttachments(jobDTO);
-        Job job = this.jobRepository.findById(id).orElseThrow(() -> new ApplicationException("job not found"));
-        if (!isSameUsername(owner, job.getPublisher())) {
-            throw new ApplicationException("wrong user");
-        }
+
+        Job job = retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+
+        User publisher = job.getPublisher();
+
+        validateMakeSureIsAuthor(ownerUsername, publisher);
+
         this.jobMapper.getModelMapper().map(jobDTO, job);
         job.setStatus(JobConst.STATUS_UPDATED);
         Job jobSaved = this.jobRepository.save(job);
+
         deleteJobPicturesNotInDTOList(jobDTO, jobSaved);
+
         Iterable<JobPicture> savedJobPictureList = saveJobPicturesInDTOList(jobDTO, jobSaved);
-        final Optional<String> mainPictureName = extractMainJobPicture(savedJobPictureList);
-        if (mainPictureName.isPresent()) {
-            job.setPicture(mainPictureName.get());
-            job = this.jobRepository.save(job);
-        }
+
+        saveJobMainPicture(job, savedJobPictureList);
+
         return this.jobMapper.toDTO(jobSaved);
+    }
+
+    private static void validateMakeSureIsAuthor(String owner, User publisher) throws ApplicationException {
+        if (!isSameUsername(owner, publisher.getUsername())) {
+            throw new ApplicationException("wrong user");
+        }
     }
 
     private static void validateMaNumberOfAttachments(JobDTO jobDTO) throws ValidationException {

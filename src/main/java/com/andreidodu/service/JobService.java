@@ -8,6 +8,8 @@ import java.util.List;
 public interface JobService {
     JobDTO getPrivate(final Long id, final String username) throws ApplicationException;
 
+    JobDTO getPrivateByAdmin(Long jobId, String username) throws ApplicationException;
+
     List<JobDTO> getAllPublic(int type, int page) throws ApplicationException;
 
     List<JobDTO> getAllPrivate(String username, int type, int page) throws ApplicationException;
@@ -31,5 +33,4 @@ public interface JobService {
 
     JobDTO getPublic(Long id) throws ApplicationException;
 
-    JobDTO getPrivateByStatus(Long id, Integer jobStatus, String username) throws ApplicationException;
 }
