@@ -19,6 +19,7 @@ import com.andreidodu.service.JobService;
 import com.andreidodu.util.ImageUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 @Transactional(Transactional.TxType.REQUIRED)
 public class JobServiceImpl implements JobService {
     private final static int NUMBER_OF_ITEMS_PER_PAGE = 10;
+    public static final int MAX_IMAGE_SIZE = 1000;
 
     private static Integer MAX_NUMBER_ATTACHED_PICTURES = 5;
     private final JobRepository jobRepository;
@@ -303,11 +305,23 @@ public class JobServiceImpl implements JobService {
         return new ArrayList<>();
     }
 
-    private JobPicture base64ImageToJobPictureModel(Job job, String base64ImageFull) throws NoSuchAlgorithmException, IOException {
-        final byte[] imageBytesData = ImageUtil.convertBase64StringToBytes(base64ImageFull);
+    private JobPicture base64ImageToJobPictureModel(Job job, String base64ImageFull) throws IOException, NoSuchAlgorithmException {
+        byte[] imageBytesData = ImageUtil.convertBase64StringToBytes(base64ImageFull);
         final String fullFileName = ImageUtil.calculateFileName(job.getId().toString(), base64ImageFull, imageBytesData);
+        ImmutablePair<Integer, Integer> imageSize = ImageUtil.retrieveImageSize(imageBytesData);
+        if (isInvalidImageSize(imageSize)) {
+            imageBytesData = getResizedImageBytes(imageBytesData);
+        }
         ImageUtil.writeImageOnFile(fullFileName, imageBytesData);
         return createJobPictureModel(fullFileName, job);
+    }
+
+    private static byte[] getResizedImageBytes(byte[] imageBytesData) {
+        return ImageUtil.resizeImage(imageBytesData, MAX_IMAGE_SIZE);
+    }
+
+    private static boolean isInvalidImageSize(ImmutablePair<Integer, Integer> imageSize) {
+        return imageSize.getLeft() > MAX_IMAGE_SIZE || imageSize.getRight() > MAX_IMAGE_SIZE;
     }
 
 
