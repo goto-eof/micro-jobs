@@ -3,6 +3,7 @@ package com.andreidodu.service.impl;
 import com.andreidodu.constants.MessageConst;
 import com.andreidodu.constants.RoomConst;
 import com.andreidodu.dto.*;
+import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.exception.ValidationException;
 import com.andreidodu.mapper.JobMapper;
 import com.andreidodu.mapper.MessageMapper;
@@ -17,10 +18,12 @@ import com.andreidodu.repository.*;
 import com.andreidodu.service.RoomService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationContextException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -37,36 +40,38 @@ public class RoomServiceImpl implements RoomService {
     private final RoomExtendedMapper roomExtendedMapper;
     private final JobMapper jobMapper;
 
+    private Supplier<ApplicationException> supplyRoomNotFoundException = () -> new ApplicationException("room not found");
+    private Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("user not found");
+    private Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+
     @Override
-    public MessageDTO createMessage(String username, MessageDTO messageDTO) throws ValidationException {
+    public MessageDTO createMessage(String username, MessageDTO messageDTO) throws ApplicationException {
         Long roomId = messageDTO.getRoomId();
 
         validateUserToRoomBelonging(username, roomId);
 
-        Optional<Room> roomOptional = roomCrudRepository.findById(messageDTO.getRoomId());
-        validateRoomExistence(roomOptional);
-        Room room = roomOptional.get();
+        Room room = retrieveRoom(messageDTO)
+                .orElseThrow(supplyRoomNotFoundException);
 
-        Optional<User> userOptional = userRepository.findByUsername(username);
-        validateUserExistence(userOptional);
-        User user = userOptional.get();
+        User user = retrieveUser(username)
+                .orElseThrow(supplyUserNotFoundException);
 
         Message message = createMessage(messageDTO, user, room);
-        messageRepository.save(message);
+        Message savedMessage = getSavedMessage(message);
 
-        return this.messageMapper.toDTO(message);
+        return this.messageMapper.toDTO(savedMessage);
     }
 
-    private static void validateRoomExistence(Optional<Room> roomOptional) throws ValidationException {
-        if (roomOptional.isEmpty()) {
-            throw new ValidationException("room does not exists");
-        }
+    private Message getSavedMessage(Message message) {
+        return messageRepository.save(message);
     }
 
-    private static void validateUserExistence(Optional<User> userOptional) throws ValidationException {
-        if (userOptional.isEmpty()) {
-            throw new ValidationException("user does not exists");
-        }
+    private Optional<User> retrieveUser(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    private Optional<Room> retrieveRoom(MessageDTO messageDTO) {
+        return retrieveRoom(messageDTO.getRoomId());
     }
 
     private void validateUserToRoomBelonging(String username, Long roomId) throws ValidationException {
@@ -89,50 +94,67 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public RoomDTO getRoom(String username, Long jobId) throws ValidationException {
-        Optional<User> userOptional = userRepository.findByUsername(username);
-        validateUserExistence(userOptional);
-        User user = userOptional.get();
+    public RoomDTO getRoom(String username, Long jobId) throws ApplicationException {
+        User user = retrieveUser(username)
+                .orElseThrow(supplyUserNotFoundException);
 
-        Optional<Room> roomOptional = roomRepository.findByJobIdAndParticipants(jobId, username);
-        Room room = null;
+        Optional<Room> roomOptional = retrieveRoom(username, jobId);
+
         if (roomOptional.isEmpty()) {
-            Optional<Job> jobOptional = jobRepository.findById(jobId);
-            validateJobExistence(jobOptional);
-            Job job = jobOptional.get();
+            Job job = retrieveJob(jobId)
+                    .orElseThrow(supplyJobNotFoundException);
 
-            room = createRoom(job);
-            room = roomCrudRepository.save(room);
+            Room room = createRoom(job);
+            room = saveRoom(room);
 
             Participant participant = createParticipant(user, room, job);
-            participantRepository.save(participant);
+            saveParticipant(participant);
+
             participant = createHostParticipant(room, job);
-            participantRepository.save(participant);
-        } else {
-            room = roomOptional.get();
-        }
+            saveParticipant(participant);
 
-        return this.roomMapper.toDTO(room);
+            return this.roomMapper.toDTO(room);
+        }
+        return this.roomMapper.toDTO(roomOptional.get());
     }
 
-    private static void validateJobExistence(Optional<Job> jobOptional) throws ValidationException {
-        if (jobOptional.isEmpty()){
-            throw new ValidationException("job does not exists");
-        }
+    private void saveParticipant(Participant participant) {
+        participantRepository.save(participant);
     }
 
+    private Room saveRoom(Room room) {
+        return roomCrudRepository.save(room);
+    }
+
+    private Optional<Room> retrieveRoom(String username, Long jobId) {
+        return roomRepository.findByJobIdAndParticipants(jobId, username);
+    }
+
+    private Optional<Job> retrieveJob(Long jobId) {
+        return jobRepository.findById(jobId);
+    }
 
     @Override
     public Optional<Long> retrieveWorkerId(String username, Long roomId) {
-        Optional<Room> roomOpt = roomCrudRepository.findById(roomId);
-        if (roomOpt.isEmpty()) {
+        Optional<Room> roomOptional = retrieveRoom(roomId);
+        if (roomOptional.isEmpty()) {
             return Optional.empty();
         }
-        Room room = roomOpt.get();
+
+        Room room = roomOptional.get();
         Long publishedId = room.getJob().getPublisher().getId();
+
+        return retrieveWorkerIdFromParticipants(room, publishedId);
+    }
+
+    private static Optional<Long> retrieveWorkerIdFromParticipants(Room room, Long publishedId) {
         return room.getParticipants().stream()
                 .filter(participant -> !participant.getUser().getId().equals(publishedId))
                 .map(participant -> participant.getUser().getId()).findFirst();
+    }
+
+    private Optional<Room> retrieveRoom(Long roomId) {
+        return roomCrudRepository.findById(roomId);
     }
 
     private static Room createRoom(Job job) {
@@ -142,15 +164,15 @@ public class RoomServiceImpl implements RoomService {
         room.setStatus(RoomConst.STATUS_CREATED);
         room.setTitle(job.getTitle());
         room.setJob(job);
-        room.setPictureName(extractMainPictureName(job));
+        room.setPictureName(extractMainPictureName(job).orElseGet(() -> null));
         return room;
     }
 
-    private static String extractMainPictureName(Job job) {
+    private static Optional<String> extractMainPictureName(Job job) {
         if (job.getJobPictureList() != null && job.getJobPictureList().size() > 0) {
-            return job.getJobPictureList().get(0).getPictureName();
+            return Optional.of(job.getJobPictureList().get(0).getPictureName());
         }
-        return "";
+        return Optional.empty();
     }
 
     private static Participant createHostParticipant(Room room, Job job) {

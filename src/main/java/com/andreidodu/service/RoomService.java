@@ -1,15 +1,16 @@
 package com.andreidodu.service;
 
 import com.andreidodu.dto.*;
+import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.exception.ValidationException;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface RoomService {
-    MessageDTO createMessage(String usernameFrom, MessageDTO messageDTO) throws ValidationException;
+    MessageDTO createMessage(String usernameFrom, MessageDTO messageDTO) throws ApplicationException;
 
-    RoomDTO getRoom(String username, Long jobId) throws ValidationException;
+    RoomDTO getRoom(String username, Long jobId) throws ApplicationException;
 
     Optional<Long> retrieveWorkerId(String username, Long roomId);
 
