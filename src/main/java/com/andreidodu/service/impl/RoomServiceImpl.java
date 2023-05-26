@@ -207,9 +207,10 @@ public class RoomServiceImpl implements RoomService {
             messageRequestDTO.setOffsetRequest(currentOffsetRequest);
             currentOffsetRequest = count;
         }
-        MessageResponseDTO response = new MessageResponseDTO();
         List<Message> messagesByUsernameAndRoomIdList = roomRepository.findMessagesByUsernameAndRoomId(username, roomId, currentOffsetRequest, count, limit);
         List<MessageDTO> messageDTOList = this.messageMapper.toListDTO(messagesByUsernameAndRoomIdList);
+
+        MessageResponseDTO response = new MessageResponseDTO();
         response.setMessages(messageDTOList);
         long nextOffset = calculateNewOffset(messageRequestDTO, count);
         response.setNextOffset(nextOffset);
