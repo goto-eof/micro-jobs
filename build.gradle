@@ -59,8 +59,9 @@ repositories {
         implementation 'org.springframework.boot:spring-boot-starter-security:3.0.6'
 
         /* TEST */
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.2'
+        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+        testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0-M1'
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
         // Querydsl
         testImplementation "com.querydsl:querydsl-jpa:${queryDslVersion}"
@@ -76,4 +77,5 @@ repositories {
 
 test {
     useJUnitPlatform()
+    testLogging.showStandardStreams=true
 }
