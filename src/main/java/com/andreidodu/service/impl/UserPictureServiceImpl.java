@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Service
 @RequiredArgsConstructor
@@ -24,10 +25,12 @@ public class UserPictureServiceImpl implements UserPictureService {
 
     private final UserPictureMapper userPictureMapper;
 
+    final static Supplier<ApplicationException> supplyUserPictureNotFoundException = () -> new ApplicationException("userPicture not found");
+
     @Override
     public UserPictureDTO get(Long userPictureId) throws ApplicationException {
         UserPicture userPicture = retrieveUserPicture(userPictureId)
-                .orElseThrow(()->new ApplicationException("userPicture not found"));
+                .orElseThrow(supplyUserPictureNotFoundException);
 
         return this.userPictureMapper.toDTO(userPicture);
     }
@@ -43,8 +46,8 @@ public class UserPictureServiceImpl implements UserPictureService {
 
     @Override
     public UserPictureDTO save(UserPictureDTO userPictureDTO) throws ApplicationException {
-        User user  = userRepository.findById(userPictureDTO.getUserId())
-                .orElseThrow(()-> new ApplicationException("user not found"));
+        User user = userRepository.findById(userPictureDTO.getUserId())
+                .orElseThrow(() -> new ApplicationException("user not found"));
 
         UserPicture userPicture = this.userPictureMapper.toModel(userPictureDTO);
         userPicture.setUser(user);
@@ -57,7 +60,7 @@ public class UserPictureServiceImpl implements UserPictureService {
     public UserPictureDTO update(Long id, UserPictureDTO userPictureDTO) throws ApplicationException {
         isUserPictureIdSame(id, userPictureDTO);
         UserPicture userPicture = this.userPictureRepository.findById(id)
-                .orElseThrow(()->new ApplicationException("userPicture not found"));
+                .orElseThrow(supplyUserPictureNotFoundException);
         this.userPictureMapper.getModelMapper().map(userPictureDTO, userPicture);
         UserPicture userSaved = this.userPictureRepository.save(userPicture);
         return this.userPictureMapper.toDTO(userSaved);
