@@ -154,8 +154,6 @@ public class Job extends ModelCommon {
                 ", title='" + title + '\'' +
                 ", description='" + description + '\'' +
                 ", type='" + type + '\'' +
-                ", jobInstanceSet=" + jobInstanceSet.size() +
-                ", jobPictureSet=" + jobPictureList.size() +
                 '}';
     }
 }
