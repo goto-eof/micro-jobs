@@ -53,7 +53,7 @@ public class JobServiceImpl implements JobService {
         validateJobId(jobId);
         validateUsername(username);
 
-        Job job = retrieveJob(jobId)
+        Job job = this.jobRepository.findById(jobId)
                 .orElseThrow(supplyJobNotFoundException);
 
         User publisher = job.getPublisher();
@@ -63,19 +63,19 @@ public class JobServiceImpl implements JobService {
         return this.jobMapper.toDTO(job);
     }
 
-    private void validateJobId(Long jobId) throws ValidationException {
+    public void validateJobId(Long jobId) throws ValidationException {
         if (jobId == null) {
             throw new ValidationException("jobId is null");
         }
     }
 
-    private void validateUsername(String username) throws ValidationException {
+    public void validateUsername(String username) throws ValidationException {
         if (username == null) {
             throw new ValidationException("username is null");
         }
     }
 
-    private Optional<Job> retrieveJob(Long id) {
+    public Optional<Job> retrieveJob(Long id) {
         return this.jobRepository.findById(id);
     }
 
