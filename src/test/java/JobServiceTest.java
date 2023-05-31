@@ -16,6 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 
 import org.mockito.*;
@@ -28,13 +29,10 @@ public class JobServiceTest {
     @Mock
     private JobMapper jobMapper;
     private JobServiceImpl jobServiceImpl;
-
     @Mock
     UserRepository userRepository;
-
     @Mock
     JobPageableRepository jobPageableRepository;
-
     @Mock
     JobPictureRepository jobPictureRepository;
 
@@ -90,23 +88,35 @@ public class JobServiceTest {
     }
 
     @Test
-    @DisplayName("Assert throws exception when jobId is null")
-    public void testValidateJobId_whenJobIdIsNull_throwException() {
+    @DisplayName("Assert it throws exception when getPrivate is called with not same username")
+    public void testGetPrivateJob_whenUsernameIsNotSame_throwException() {
         // Arrange
-        Long emptyJobId = null;
+        String username = "mario.rossi";
+        Job mockData = prepareJobMock();
 
         // Act & Assert
-        assertThrows(ApplicationException.class, () -> jobServiceImpl.validateJobId(emptyJobId));
+        long jobId = 1L;
+        Mockito.doReturn(Optional.of(mockData)).when(jobRepository).findById(jobId);
+        assertThrows(ApplicationException.class, () -> jobServiceImpl.getPrivate(jobId, username));
+        Mockito.verify(jobMapper, Mockito.times(0))
+                .toDTO(mockData);
     }
 
     @Test
-    @DisplayName("Assert throws exception when username is null")
-    public void testValidateUsername_whenUsernameIsNull_throwException() {
+    @DisplayName("Assert it calls toDTO when getPrivate is called with same username")
+    public void testGetPrivateJob_whenUsernameIsSame_callToDTO() {
         // Arrange
-        String emptyUsername = null;
+        String username = "test";
+        Job mockData = prepareJobMock();
+        long jobId = 1L;
+        Mockito.doReturn(Optional.of(mockData)).when(jobRepository).findById(jobId);
 
-        // Act & Assert
-        assertThrows(ApplicationException.class, () -> jobServiceImpl.validateUsername(emptyUsername));
+        // Act
+        JobDTO jobDTO = jobServiceImpl.getPrivate(jobId, username);
+
+        // Assert
+        Mockito.verify(jobMapper, Mockito.times(1))
+                .toDTO(mockData);
     }
 
     private static Job prepareJobMock() {
@@ -125,5 +135,34 @@ public class JobServiceTest {
         mockJob.setType(JobConst.TYPE_REQUEST);
         mockJob.setId(1l);
         return mockJob;
+    }
+
+    @Test
+    @DisplayName("Assert it calls findByIdAndStatus one time")
+    public void testGetPublicJob_whenJobIdAndUsernameProvided_returnJob() {
+        // Arrange
+        Job mockJob = prepareJobMock();
+        Mockito.doReturn(Optional.of(mockJob)).when(jobRepository).findByIdAndStatus(1L, JobConst.STATUS_PUBLISHED);
+
+        // Act
+        JobDTO jobDTO = jobServiceImpl.getPublic(1L);
+
+        // Assert
+        Mockito.verify(jobRepository, Mockito.times(1))
+                .findByIdAndStatus(anyLong(), anyInt());
+    }
+
+    @Test
+    @DisplayName("Assert it throws exception when getPrivate is called with empty jobId")
+    public void testGetPublicJob_whenJobIdIsNull_throwException() {
+        // Arrange
+        Long emptyJobId = null;
+
+        // Act
+        assertThrows(ApplicationException.class, () -> jobServiceImpl.getPublic(emptyJobId));
+
+        // Assert
+        Mockito.verify(jobRepository, Mockito.times(0))
+                .findByIdAndStatus(anyLong(), anyInt());
     }
 }

@@ -63,13 +63,13 @@ public class JobServiceImpl implements JobService {
         return this.jobMapper.toDTO(job);
     }
 
-    public void validateJobId(Long jobId) throws ValidationException {
+    private void validateJobId(Long jobId) throws ValidationException {
         if (jobId == null) {
             throw new ValidationException("jobId is null");
         }
     }
 
-    public void validateUsername(String username) throws ValidationException {
+    private void validateUsername(String username) throws ValidationException {
         if (username == null) {
             throw new ValidationException("username is null");
         }
@@ -93,14 +93,10 @@ public class JobServiceImpl implements JobService {
     public JobDTO getPublic(Long jobId) throws ApplicationException {
         validateJobId(jobId);
 
-        Job job = findJobPublished(jobId)
+        Job job = this.jobRepository.findByIdAndStatus(jobId, JobConst.STATUS_PUBLISHED)
                 .orElseThrow(supplyJobNotFoundException);
 
         return this.jobMapper.toDTO(job);
-    }
-
-    private Optional<Job> findJobPublished(Long jobId) {
-        return this.jobRepository.findByIdAndStatus(jobId, JobConst.STATUS_PUBLISHED);
     }
 
     @Override
