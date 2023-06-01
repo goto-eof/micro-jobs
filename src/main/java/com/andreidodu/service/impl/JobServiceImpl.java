@@ -104,7 +104,7 @@ public class JobServiceImpl implements JobService {
         validateJobId(jobId);
         validateUsername(username);
 
-        User administrator = retrieveUserByUsername(username)
+        User administrator = this.userRepository.findByUsername(username)
                 .orElseThrow(supplyUserNotFoundException);
 
         validateMakeSureIsAdmin(administrator);
@@ -119,10 +119,6 @@ public class JobServiceImpl implements JobService {
         if (!isAdminSameRole(administrator)) {
             throw new ValidationException("User is not admin");
         }
-    }
-
-    private Optional<User> retrieveUserByUsername(String username) {
-        return this.userRepository.findByUsername(username);
     }
 
     private static boolean isAdminSameRole(User administrator) {
@@ -170,17 +166,17 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public List<JobDTO> getAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username, int page) throws ApplicationException {
+    public List<JobDTO> getAllPrivateByTypeAndStatus(int jobType, List<Integer> statuses, String username, int page) throws ApplicationException {
         validateUsername(username);
-        validateJobType(type);
+        validateJobType(jobType);
 
-        User user = retrieveUserByUsername(username)
+        User user = this.userRepository.findByUsername(username)
                 .orElseThrow(supplyUserNotFoundException);
 
         validateMakeSureIsAdmin(user);
 
         Pageable pageRequest = PageRequest.of(page, NUMBER_OF_ITEMS_PER_PAGE);
-        List<Job> models = retrieveJobs(type, pageRequest, statuses);
+        List<Job> models = retrieveJobs(jobType, pageRequest, statuses);
 
         return this.jobMapper.toListDTO(models);
     }
@@ -195,7 +191,7 @@ public class JobServiceImpl implements JobService {
     public long countAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username) throws ApplicationException {
         validateUsername(username);
 
-        User user = retrieveUserByUsername(username)
+        User user = this.userRepository.findByUsername(username)
                 .orElseThrow(supplyUserNotFoundException);
 
         validateMakeSureIsAdminByRole(user.getRole());
@@ -214,7 +210,7 @@ public class JobServiceImpl implements JobService {
         validateJobId(jobId);
         validateUsername(username);
 
-        User user = retrieveUserByUsername(username)
+        User user = this.userRepository.findByUsername(username)
                 .orElseThrow(supplyUserNotFoundException);
 
         Job job = retrieveJob(jobId)
@@ -250,7 +246,7 @@ public class JobServiceImpl implements JobService {
         validateUsername(username);
         validateMaNumberOfAttachments(jobDTO);
 
-        User author = retrieveUserByUsername(username)
+        User author = this.userRepository.findByUsername(username)
                 .orElseThrow(supplyUserNotFoundException);
 
         jobDTO.setStatus(JobConst.STATUS_CREATED);
@@ -332,7 +328,7 @@ public class JobServiceImpl implements JobService {
     public JobDTO changeJobStatus(Long jobId, int jobStatus, String usernameAdministrator) throws ApplicationException {
         validateJobId(jobId);
 
-        User administrator = retrieveUserByUsername(usernameAdministrator)
+        User administrator = this.userRepository.findByUsername(usernameAdministrator)
                 .orElseThrow(supplyUserNotFoundException);
 
         validateRoleIsAdmin(administrator);

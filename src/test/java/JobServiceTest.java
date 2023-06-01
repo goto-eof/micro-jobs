@@ -2,10 +2,7 @@ import com.andreidodu.constants.JobConst;
 import com.andreidodu.dto.JobDTO;
 import com.andreidodu.exception.ApplicationException;
 import com.andreidodu.mapper.JobMapper;
-import com.andreidodu.model.Job;
-import com.andreidodu.model.PaymentType;
-import com.andreidodu.model.User;
-import com.andreidodu.model.UserPicture;
+import com.andreidodu.model.*;
 import com.andreidodu.repository.JobPageableRepository;
 import com.andreidodu.repository.JobPictureRepository;
 import com.andreidodu.repository.JobRepository;
@@ -21,6 +18,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 
 import org.mockito.*;
 
+import java.util.Arrays;
 import java.util.Optional;
 
 public class JobServiceTest {
@@ -28,13 +26,13 @@ public class JobServiceTest {
     private JobRepository jobRepository;
     @Mock
     private JobMapper jobMapper;
-    private JobServiceImpl jobServiceImpl;
     @Mock
     UserRepository userRepository;
     @Mock
     JobPageableRepository jobPageableRepository;
     @Mock
     JobPictureRepository jobPictureRepository;
+    private JobServiceImpl jobServiceImpl;
 
     @BeforeEach
     public void beforeEach() {
@@ -164,5 +162,46 @@ public class JobServiceTest {
         // Assert
         Mockito.verify(jobRepository, Mockito.times(0))
                 .findByIdAndStatus(anyLong(), anyInt());
+    }
+
+
+    @Test
+    @DisplayName("Assert that getAllPrivateByTypeAndStatus throws exception if is not the admin")
+    public void testGetAllPrivateByTypeAndStatus_whenNotAdmin_throwException() {
+        // Arrance
+        User simpleUser = createSimpleUser();
+        Mockito.when(userRepository.findByUsername("user")).thenReturn(Optional.of(simpleUser));
+
+        // Act & Assert
+        assertThrows(ApplicationException.class, () -> jobServiceImpl.countAllPrivateByTypeAndStatus(1, Arrays.asList(1), "user"));
+    }
+
+    private User createSimpleUser() {
+        User simpleUser = new User();
+        simpleUser.setRole(Role.USER);
+        return simpleUser;
+    }
+
+
+    @Test
+    @DisplayName("Assert that is admin role for countAllPrivateByTypeAndStatus")
+    public void testCountAllPrivateByTypeAndStatus_whenNotAdmin_throwException() {
+        // Arrange
+        User simpleUser = createSimpleUser();
+        Mockito.when(userRepository.findByUsername("user")).thenReturn(Optional.of(simpleUser));
+
+        // Act & Assert
+        assertThrows(ApplicationException.class, () -> jobServiceImpl.countAllPrivateByTypeAndStatus(1, Arrays.asList(1), "user"));
+    }
+
+
+    @Test
+    @DisplayName("Assert that is admin role for countAllPrivateByTypeAndStatus")
+    public void testCountAllPrivateByTypeAndStatus_whenUsernameInvalid_throwException() {
+        // Arrange
+        String username = null;
+
+        // Act & Assert
+        assertThrows(ApplicationException.class, () -> jobServiceImpl.countAllPrivateByTypeAndStatus(1, Arrays.asList(1), username));
     }
 }
