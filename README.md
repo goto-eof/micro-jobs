@@ -16,21 +16,21 @@ Micro Jobs is a small platform that allows users to offer or to request services
 - Git
 
 # Features
-- user login (JWT);
-- user logout;
-- user registration;
-- refresh token;
-- view requests/offers;
-- insert requests/offers;
-- paginated requests/offers;
-- picture upload;
-- admin: approve post;
-- message module: write/read DM between users;
-- infinite scrolling in DM;
-- microjob status;
-- user rating;
-- code testing with Mockito;
-- ...wip.
+- user login (JWT)
+- user logout
+- user registration
+- refresh token
+- view requests/offers
+- insert requests/offers
+- paginated requests/offers
+- picture upload
+- admin: approve post
+- message module: write/read DM between users
+- infinite scrolling in DM
+- microjob status
+- user rating
+- code testing with Mockito
+- ...wip
 
 # Architecture
 ![Database](micro-jobs.png)
