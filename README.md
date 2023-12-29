@@ -35,7 +35,7 @@ Micro Jobs is a small platform that allows users to offer or to request services
 # Architecture
 ![Database](micro-jobs.png)
 
-# Job Instance status flow
+# Job Instance flow
 ![Database](JobStatusFlow.png)
 
 # Run it
