@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -28,8 +27,8 @@ public class JobPictureServiceImpl implements JobPictureService {
     private final JobRepository jobRepository;
     private final JobPictureMapper jobPictureMapper;
 
-    private static Supplier<ApplicationException> supplyJobPictureNotFoundException = () -> new ApplicationException("JobPicture not found");
-    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+    private static final Supplier<ApplicationException> supplyJobPictureNotFoundException = () -> new ApplicationException("JobPicture not found");
+    private static final Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
 
     private Function<Long, Optional<JobPicture>> retrieveJobPicture;
     private Function<JobPicture, JobPictureDTO> saveJobPicture;
@@ -38,22 +37,25 @@ public class JobPictureServiceImpl implements JobPictureService {
     @PostConstruct
     private void postConstruct() {
         saveJobPicture = (jobPicture) -> this.jobPictureMapper.toDTO(this.jobPictureRepository.save(jobPicture));
-        retrieveJobPicture = jobPictureId -> jobPictureRepository.findById(jobPictureId);
-        retrieveJob = (jobId) -> this.jobRepository.findById(jobId);
+        retrieveJobPicture = jobPictureRepository::findById;
+        retrieveJob = this.jobRepository::findById;
     }
 
     @Override
     public JobPictureDTO get(Long jobPictureId) throws ApplicationException {
-        JobPicture jobPicture = retrieveJobPicture.apply(jobPictureId)
-                .orElseThrow(supplyJobPictureNotFoundException);
+        JobPicture jobPicture = checkExistence(jobPictureId);
         return this.jobPictureMapper.toDTO(jobPicture);
     }
 
     @Override
     public void delete(Long jobPictureId) throws ApplicationException {
-        JobPicture jobPicture = retrieveJobPicture.apply(jobPictureId)
-                .orElseThrow(supplyJobPictureNotFoundException);
+        JobPicture jobPicture = checkExistence(jobPictureId);
         this.jobPictureRepository.delete(jobPicture);
+    }
+
+    private JobPicture checkExistence(Long jobPictureId) {
+        return retrieveJobPicture.apply(jobPictureId)
+                .orElseThrow(supplyJobPictureNotFoundException);
     }
 
     @Override
@@ -71,8 +73,7 @@ public class JobPictureServiceImpl implements JobPictureService {
     public JobPictureDTO update(Long id, JobPictureDTO jobPictureDTO) throws ApplicationException {
         validateJobPictureIdMatching(id, jobPictureDTO);
 
-        JobPicture jobPicture = retrieveJobPicture.apply(id)
-                .orElseThrow(supplyJobPictureNotFoundException);
+        JobPicture jobPicture = checkExistence(id);
 
         copyJobPictureDtoPropertiesToModel(jobPictureDTO, jobPicture);
 

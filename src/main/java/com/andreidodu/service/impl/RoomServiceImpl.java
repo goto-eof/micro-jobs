@@ -18,7 +18,6 @@ import com.andreidodu.repository.*;
 import com.andreidodu.service.RoomService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationContextException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,20 +28,22 @@ import java.util.function.Supplier;
 @RequiredArgsConstructor
 @Transactional(Transactional.TxType.REQUIRED)
 public class RoomServiceImpl implements RoomService {
+    final private static Supplier<ApplicationException> supplyRoomNotFoundException = () -> new ApplicationException("room not found");
+    final private static Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("user not found");
+    final private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+
     private final RoomRepository roomRepository;
     private final RoomCrudRepository roomCrudRepository;
     private final JobRepository jobRepository;
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final MessageMapper messageMapper;
     private final ParticipantRepository participantRepository;
+
+    private final MessageMapper messageMapper;
     private final RoomMapper roomMapper;
     private final RoomExtendedMapper roomExtendedMapper;
     private final JobMapper jobMapper;
 
-    private Supplier<ApplicationException> supplyRoomNotFoundException = () -> new ApplicationException("room not found");
-    private Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("user not found");
-    private Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
 
     @Override
     public MessageDTO createMessage(String username, MessageDTO messageDTO) throws ApplicationException {
@@ -150,7 +151,8 @@ public class RoomServiceImpl implements RoomService {
     private static Optional<Long> retrieveWorkerIdFromParticipants(Room room, Long publishedId) {
         return room.getParticipants().stream()
                 .filter(participant -> !participant.getUser().getId().equals(publishedId))
-                .map(participant -> participant.getUser().getId()).findFirst();
+                .map(participant -> participant.getUser().getId())
+                .findFirst();
     }
 
     private Optional<Room> retrieveRoom(Long roomId) {
@@ -169,7 +171,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private static Optional<String> extractMainPictureName(Job job) {
-        if (job.getJobPictureList() != null && job.getJobPictureList().size() > 0) {
+        if (job.getJobPictureList() != null && !job.getJobPictureList().isEmpty()) {
             return Optional.of(job.getJobPictureList().get(0).getPictureName());
         }
         return Optional.empty();
@@ -222,14 +224,10 @@ public class RoomServiceImpl implements RoomService {
     private static long calculateNewOffset(MessageRequestDTO messageRequestDTO, long count) {
         long offset = messageRequestDTO.getOffsetRequest();
         if (offset == count || offset > count) {
-            offset = -1;
-        } else {
-            offset += MessageConst.NUM_OF_MESSAGES_LIMIT;
-            if (offset > count) {
-                offset = count;
-            }
+            return -1;
         }
-        return offset;
+        offset += MessageConst.NUM_OF_MESSAGES_LIMIT;
+        return Math.min(offset, count);
     }
 
     @Override
@@ -238,7 +236,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     @Override
-    public JobDTO getJobByRoomId(String extractUsernameFromAuthorizzation, Long roomId) {
+    public JobDTO getJobByRoomId(String extractUsernameFromAuthorization, Long roomId) {
         return this.jobMapper.toDTO(this.roomCrudRepository.findById(roomId).get().getJob());
     }
 }

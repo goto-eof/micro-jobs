@@ -37,30 +37,35 @@ import java.util.stream.Collectors;
 public class JobServiceImpl implements JobService {
     private final static int NUMBER_OF_ITEMS_PER_PAGE = 10;
     public static final int MAX_IMAGE_SIZE = 1000;
+    private static final Integer MAX_NUMBER_ATTACHED_PICTURES = 5;
+    private static final Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
+    private static final Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("User not found");
 
-    private static Integer MAX_NUMBER_ATTACHED_PICTURES = 5;
+
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
     private final JobPageableRepository jobPageableRepository;
     private final JobPictureRepository jobPictureRepository;
-    private final JobMapper jobMapper;
 
-    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ApplicationException("Job not found");
-    private static Supplier<ApplicationException> supplyUserNotFoundException = () -> new ApplicationException("User not found");
+    private final JobMapper jobMapper;
 
     @Override
     public JobDTO getPrivate(final Long jobId, final String username) throws ApplicationException {
         validateJobId(jobId);
         validateUsername(username);
 
-        Job job = this.jobRepository.findById(jobId)
-                .orElseThrow(supplyJobNotFoundException);
+        Job job = checkExistence(jobId);
 
         User publisher = job.getPublisher();
 
         validateSameUsername(username, publisher.getUsername());
 
         return this.jobMapper.toDTO(job);
+    }
+
+    private Job checkExistence(Long jobId) {
+        return this.jobRepository.findById(jobId)
+                .orElseThrow(supplyJobNotFoundException);
     }
 
     private void validateJobId(Long jobId) throws ValidationException {
@@ -70,9 +75,8 @@ public class JobServiceImpl implements JobService {
     }
 
     private void validateUsername(String username) throws ValidationException {
-        if (username == null) {
-            throw new ValidationException("username is null");
-        }
+        Optional.ofNullable(username)
+                .orElseThrow(() -> new ValidationException("username is null"));
     }
 
     public Optional<Job> retrieveJob(Long id) {
@@ -104,13 +108,11 @@ public class JobServiceImpl implements JobService {
         validateJobId(jobId);
         validateUsername(username);
 
-        User administrator = this.userRepository.findByUsername(username)
-                .orElseThrow(supplyUserNotFoundException);
+        User administrator = checkUserExistence(username);
 
         validateMakeSureIsAdmin(administrator);
 
-        Job job = retrieveJob(jobId)
-                .orElseThrow(supplyJobNotFoundException);
+        Job job = checkJobExistence(jobId);
 
         return this.jobMapper.toDTO(job);
     }
@@ -130,7 +132,7 @@ public class JobServiceImpl implements JobService {
         validateJobType(type);
 
         Pageable pageRequest = PageRequest.of(page, NUMBER_OF_ITEMS_PER_PAGE);
-        List<Integer> allowedStatuses = Arrays.asList(JobConst.STATUS_PUBLISHED);
+        List<Integer> allowedStatuses = List.of(JobConst.STATUS_PUBLISHED);
         List<Job> models = retrieveJobs(type, pageRequest, allowedStatuses);
 
         return this.jobMapper.toListDTO(models);
@@ -142,7 +144,7 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public long countAllPublicByType(int type) {
-        return this.jobRepository.countByTypeAndStatusIn(type, Arrays.asList(JobConst.STATUS_PUBLISHED));
+        return this.jobRepository.countByTypeAndStatusIn(type, List.of(JobConst.STATUS_PUBLISHED));
     }
 
     @Override
@@ -170,8 +172,7 @@ public class JobServiceImpl implements JobService {
         validateUsername(username);
         validateJobType(jobType);
 
-        User user = this.userRepository.findByUsername(username)
-                .orElseThrow(supplyUserNotFoundException);
+        User user = checkUserExistence(username);
 
         validateMakeSureIsAdmin(user);
 
@@ -191,8 +192,7 @@ public class JobServiceImpl implements JobService {
     public long countAllPrivateByTypeAndStatus(int type, List<Integer> statuses, String username) throws ApplicationException {
         validateUsername(username);
 
-        User user = this.userRepository.findByUsername(username)
-                .orElseThrow(supplyUserNotFoundException);
+        User user = checkUserExistence(username);
 
         validateMakeSureIsAdminByRole(user.getRole());
 
@@ -210,11 +210,8 @@ public class JobServiceImpl implements JobService {
         validateJobId(jobId);
         validateUsername(username);
 
-        User user = this.userRepository.findByUsername(username)
-                .orElseThrow(supplyUserNotFoundException);
-
-        Job job = retrieveJob(jobId)
-                .orElseThrow(supplyJobNotFoundException);
+        User user = checkUserExistence(username);
+        Job job = checkJobExistence(jobId);
 
         User publisher = job.getPublisher();
         validateMakeSureIsJobAuthor(user, publisher);
@@ -222,6 +219,16 @@ public class JobServiceImpl implements JobService {
         deleteFilesFromDisk(job.getJobPictureList());
 
         deleteJob(jobId, username);
+    }
+
+    private Job checkJobExistence(Long jobId) {
+        return retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
+    }
+
+    private User checkUserExistence(String username) {
+        return this.userRepository.findByUsername(username)
+                .orElseThrow(supplyUserNotFoundException);
     }
 
     private static void validateMakeSureIsJobAuthor(User user, User publisher) throws ValidationException {
@@ -246,8 +253,7 @@ public class JobServiceImpl implements JobService {
         validateUsername(username);
         validateMaNumberOfAttachments(jobDTO);
 
-        User author = this.userRepository.findByUsername(username)
-                .orElseThrow(supplyUserNotFoundException);
+        User author = checkUserExistence(username);
 
         jobDTO.setStatus(JobConst.STATUS_CREATED);
 
@@ -280,9 +286,9 @@ public class JobServiceImpl implements JobService {
     }
 
     private Iterable<JobPicture> saveJobPictureModelList(final List<JobPictureDTO> jobPictureDTOList, Job job) {
-        if (jobPictureDTOList != null && jobPictureDTOList.size() > 0) {
+        if (jobPictureDTOList != null && !jobPictureDTOList.isEmpty()) {
             final List<JobPicture> listOfModels = jobPictureDTOList.stream()
-                    .map(jobPictureDTO -> jobPictureDTO.getContent())
+                    .map(JobPictureDTO::getContent)
                     .map(base64ImageFull -> {
                         try {
                             return base64ImageToJobPictureModel(job, base64ImageFull);
@@ -290,7 +296,7 @@ public class JobServiceImpl implements JobService {
                             throw new RuntimeException(e);
                         }
                     }).collect(Collectors.toList());
-            if (listOfModels.size() > 0) {
+            if (!listOfModels.isEmpty()) {
                 return this.jobPictureRepository.saveAll(listOfModels);
             }
         }
@@ -328,13 +334,11 @@ public class JobServiceImpl implements JobService {
     public JobDTO changeJobStatus(Long jobId, int jobStatus, String usernameAdministrator) throws ApplicationException {
         validateJobId(jobId);
 
-        User administrator = this.userRepository.findByUsername(usernameAdministrator)
-                .orElseThrow(supplyUserNotFoundException);
+        User administrator = checkUserExistence(usernameAdministrator);
 
         validateRoleIsAdmin(administrator);
 
-        Job job = retrieveJob(jobId)
-                .orElseThrow(supplyJobNotFoundException);
+        Job job = checkJobExistence(jobId);
 
         job.setStatus(jobStatus);
         Job jobSaved = this.jobRepository.save(job);
@@ -355,8 +359,7 @@ public class JobServiceImpl implements JobService {
         validateJobIdMatch(jobId, jobDTO);
         validateMaNumberOfAttachments(jobDTO);
 
-        Job job = retrieveJob(jobId)
-                .orElseThrow(supplyJobNotFoundException);
+        Job job = checkJobExistence(jobId);
 
         User publisher = job.getPublisher();
 
@@ -413,7 +416,7 @@ public class JobServiceImpl implements JobService {
     }
 
     private void deletePicturesFromPictureList(List<JobPicture> jobPictureListToBeDeleted) {
-        if (jobPictureListToBeDeleted.size() > 0) {
+        if (!jobPictureListToBeDeleted.isEmpty()) {
             deleteFilesFromDisk(jobPictureListToBeDeleted);
             this.jobPictureRepository.deleteAll(jobPictureListToBeDeleted);
         }
@@ -429,7 +432,7 @@ public class JobServiceImpl implements JobService {
         return jobDTO.getJobPictureList()
                 .stream()
                 .filter(jobPictureDTO -> jobPictureDTO.getContent() == null)
-                .map(jobPicture -> jobPicture.getPictureName())
+                .map(JobPictureDTO::getPictureName)
                 .collect(Collectors.toList());
     }
 

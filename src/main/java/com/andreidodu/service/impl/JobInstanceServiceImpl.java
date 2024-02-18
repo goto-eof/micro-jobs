@@ -17,6 +17,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -31,9 +32,9 @@ public class JobInstanceServiceImpl implements JobInstanceService {
     private final UserRepository userRepository;
     private final JobInstanceMapper jobInstanceMapper;
 
-    private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
-    private static Supplier<ApplicationException> supplyJobNotFoundException = () -> new ValidationException("Job not found");
-    private static Supplier<ApplicationException> supplyUserNotFountException = () -> new ApplicationException("User not found");
+    private static final Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
+    private static final Supplier<ApplicationException> supplyJobNotFoundException = () -> new ValidationException("Job not found");
+    private static final Supplier<ApplicationException> supplyUserNotFountException = () -> new ApplicationException("User not found");
     private Function<JobInstance, JobInstanceDTO> saveAndReturnJobInstanceDTO;
 
     @PostConstruct
@@ -48,7 +49,7 @@ public class JobInstanceServiceImpl implements JobInstanceService {
 
         Optional<JobInstance> jobInstanceOptional = retrieveJobInstanceByJobIdAndWorkerId(jobId, workerId);
 
-        return jobInstanceOptional.map(jobInstance -> jobInstanceMapper.toDTO(jobInstance))
+        return jobInstanceOptional.map(jobInstanceMapper::toDTO)
                 .orElseGet(() -> this.jobInstanceMapper.toDTO(createJobInstance(jobId, workerId)));
     }
 
@@ -121,12 +122,8 @@ public class JobInstanceServiceImpl implements JobInstanceService {
 
 
     private JobInstance createJobInstance(Long jobId, String username) throws ApplicationException {
-        Job job = retrieveJob(jobId)
-                .orElseThrow(supplyJobNotFoundException);
-
-        User worker = retrieveUserByUsername(username)
-                .orElseThrow(supplyUserNotFountException);
-
+        Job job = checkExistence(jobId);
+        User worker = checkUserExistence(username);
 
         JobInstance jobInstance = new JobInstance();
         jobInstance.setStatus(JobInstanceConst.STATUS_CREATED);
@@ -135,6 +132,16 @@ public class JobInstanceServiceImpl implements JobInstanceService {
         jobInstance.setUserCustomer(job.getPublisher());
 
         return this.jobInstanceRepository.save(jobInstance);
+    }
+
+    private User checkUserExistence(String username) {
+        return retrieveUserByUsername(username)
+                .orElseThrow(supplyUserNotFountException);
+    }
+
+    private Job checkExistence(Long jobId) {
+        return retrieveJob(jobId)
+                .orElseThrow(supplyJobNotFoundException);
     }
 
     private Optional<Job> retrieveJob(Long jobId) {

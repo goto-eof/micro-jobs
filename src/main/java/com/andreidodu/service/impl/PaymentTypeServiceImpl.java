@@ -25,15 +25,13 @@ public class PaymentTypeServiceImpl implements PaymentTypeService {
 
     @Override
     public PaymentTypeDTO get(Long id) throws ApplicationException {
-        Optional<PaymentType> modelOpt = this.paymentTypeRepository.findById(id);
-        validatePaymentTypeExistence(modelOpt);
-        return this.paymentTypeMapper.toDTO(modelOpt.get());
+        PaymentType paymentType = checkPaymentTypeExistence(id);
+        return this.paymentTypeMapper.toDTO(paymentType);
     }
 
-    private static void validatePaymentTypeExistence(Optional<PaymentType> modelOpt) throws ApplicationException {
-        if (modelOpt.isEmpty()) {
-            throw new ApplicationException("PaymentType not found");
-        }
+    private PaymentType checkPaymentTypeExistence(Long id) {
+        return this.paymentTypeRepository.findById(id)
+                .orElseThrow(() -> new ApplicationException("PaymentType not found"));
     }
 
     @Override
@@ -60,9 +58,7 @@ public class PaymentTypeServiceImpl implements PaymentTypeService {
     @Override
     public PaymentTypeDTO update(Long id, PaymentTypeDTO paymentTypeDTO) throws ApplicationException {
         validateUpdateInput(id, paymentTypeDTO);
-        Optional<PaymentType> paymentTypeOptional = this.paymentTypeRepository.findById(id);
-        validatePaymentTypeExistence(paymentTypeOptional);
-        PaymentType paymentType = paymentTypeOptional.get();
+        PaymentType paymentType = checkPaymentTypeExistence(id);
 
         this.paymentTypeMapper.getModelMapper().map(paymentTypeDTO, paymentType);
         PaymentType userSaved = this.paymentTypeRepository.save(paymentType);

@@ -20,12 +20,13 @@ import java.util.function.Supplier;
 @Transactional(Transactional.TxType.REQUIRED)
 public class UserPictureServiceImpl implements UserPictureService {
 
+    final static Supplier<ApplicationException> supplyUserPictureNotFoundException = () -> new ApplicationException("userPicture not found");
+
     private final UserPictureRepository userPictureRepository;
     private final UserRepository userRepository;
 
     private final UserPictureMapper userPictureMapper;
 
-    final static Supplier<ApplicationException> supplyUserPictureNotFoundException = () -> new ApplicationException("userPicture not found");
 
     @Override
     public UserPictureDTO get(Long userPictureId) throws ApplicationException {

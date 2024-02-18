@@ -32,9 +32,9 @@ public class RatingServiceImpl implements RatingService {
     private final JobInstanceRepository jobInstanceRepository;
     private final RatingMapper ratingMapper;
 
-    private static Supplier<ApplicationException> supplyUserTargetNotFoundException = () -> new ApplicationException("userTarget not found");
-    private static Supplier<ApplicationException> supplyUserVoterNotFoundException = () -> new ApplicationException("userVoter not found");
-    private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
+    final private static Supplier<ApplicationException> supplyUserTargetNotFoundException = () -> new ApplicationException("userTarget not found");
+    final private static Supplier<ApplicationException> supplyUserVoterNotFoundException = () -> new ApplicationException("userVoter not found");
+    final private static Supplier<ApplicationException> supplyJobInstanceNotFoundException = () -> new ApplicationException("JobInstance not found");
     private Function<Rating, RatingDTO> saveRatingAndReturnDTO;
 
     @PostConstruct
@@ -49,8 +49,7 @@ public class RatingServiceImpl implements RatingService {
 
         Optional<Rating> ratingOptional = retrieveRating(jobInstanceId, raterUsername, targetUserId);
 
-        return Optional.ofNullable(ratingOptional.map(rating -> ratingMapper.toDTO(rating))
-                .orElse(null));
+        return ratingOptional.map(ratingMapper::toDTO);
     }
 
     private static void validateTargetUserId(Long targetUserId) throws ValidationException {
@@ -119,19 +118,16 @@ public class RatingServiceImpl implements RatingService {
     }
 
     private RatingDTO updateRating(RatingDTO ratingDTO) throws ApplicationException {
-        Optional<Rating> ratingOptional = ratingRepository.findById(ratingDTO.getId());
-        validateRatingExistence(ratingOptional);
-        Rating rating = ratingOptional.get();
+        Rating rating = checkRatingExistence(ratingDTO.getId());
         rating.setRating(ratingDTO.getRating());
         rating.setComment(ratingDTO.getComment());
 
         return saveRatingAndReturnDTO.apply(rating);
     }
 
-    private static void validateRatingExistence(Optional<Rating> ratingOptional) throws ApplicationException {
-        if (ratingOptional.isEmpty()) {
-            throw new ApplicationException("Rating not found");
-        }
+    private Rating checkRatingExistence(Long ratingId) {
+        return ratingRepository.findById(ratingId)
+                .orElseThrow(() -> new ApplicationException("Rating not found"));
     }
 
     @Override
@@ -151,7 +147,7 @@ public class RatingServiceImpl implements RatingService {
     }
 
     private static double calculateNewRating(List<Rating> ratingList) {
-        Integer sumOfAllVotes = ratingList.stream().map(rating -> rating.getRating()).reduce(0, Integer::sum);
+        Integer sumOfAllVotes = ratingList.stream().map(Rating::getRating).reduce(0, Integer::sum);
         return ((double) sumOfAllVotes) / ratingList.size();
     }
 
@@ -162,6 +158,5 @@ public class RatingServiceImpl implements RatingService {
     private Optional<User> retrieveUserByUsername(String usernameTargetUser) {
         return userRepository.findByUsername(usernameTargetUser);
     }
-
 
 }

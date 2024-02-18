@@ -4,7 +4,7 @@ spring:
     dispatch-options-request=true:
   datasource:
     driverClassName: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/microjobs
+    url: jdbc:postgresql://localhost:5434/microjobs
     username: postgres
     password: postgres
   jpa:
