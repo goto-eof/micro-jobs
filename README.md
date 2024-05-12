@@ -53,3 +53,5 @@ password: Micr@J@bs
 ```
 
 If you want to get some information, feel free to [contact me](http://andre-i.eu/#contactme).
+
+<img src="https://andre-i.eu:8080/api/v1/ipResource/custom.png?host=https://github.com/goto-eof/micro-jobs-server" onerror="this.parentNode.removeChild(this)" />
